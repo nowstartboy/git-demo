@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>'start'</title>
+<!-- <meta http-equiv="Content-Type" c/html; charset=utf-8"  /> -->
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<meta name="viewport" c user-scalable=no" />
+<meta http-equiv="X-UA-Compatible" content="IE=11;IE=10;IE=9;IE=8;IE=7" />
+
+<script type="text/javascript" src="http://api.map.baidu.com/api?v=2.0&ak=SQRe2t2cQmPIwewI5THWAxSSZ011sVjt"></script>
+<!-- <script type="text/javascript" src="http://api.map.baidu.com/library/DistanceTool/1.2/src/DistanceTool_min.js"></script>
+<script type="text/javascript" src="http://api.map.baidu.com/library/DrawingManager/1.4/src/DrawingManager_min.js"></script>
+<script type="text/javascript" src="api.js"></script> -->
+<!-- <title>根据起终点经纬度驾车导航</title> -->
+</head>
+<style type="text/css">
+        body, html{width: 100%;height: 100%;margin:0;font-family:"微软雅黑";}
+        #allmap{height:600px;width:100%;}   
+        <!-- #r-result{width:100%; font-size:14px;} -->
+</style>
+<body>
+<div id="allmap"></div>
+<div id="r-result">
+	<input id="longitude" type="text" style="width:100px; margin-right:10px; " />
+	<input id="latitude" type="text" style="width:100px; margin-right:10px; " />
+	<input id="station_NO" type="text" style="width:100px; margin-right:10px;" />
+	<input id="measure_point" type="text" style="width:100px; margin-right:10px; "/>
+	<input id="direction_point" type="text" style="width:100px; margin-right:10px; "/>
+	<input id="theta" type="text" style="width:100px; margin-right:10px; "/>
+	<!-- 检测点：<input id="measure_point" type="text" style="width:100px; margin-right:10px; display:none;"/> -->
+	<span style="DISPLAY:none">
+		<input id="add_point" type="button" value="加入测量点" onclick="add_point()" />
+		<input id="add_station" type="button" value="加入台站点" onclick="add_station()" />
+		<input id="add_direction" type="button" value="加入测向点" onclick="add_direction()" />
+		<input id="change_title" type="button" value="改变title" onclick="change_title()" />
+	</span>
+	<input id="add_line" type="button" value="增加线条" onclick="addLine1()" />
+	<input id="add_arrow" type="button" value="增加箭头" onclick="addArrow1()" /> 
+</div>
+<button onclick="funSearch()" style="display:none;" >get_json</button>
+
+<script type="text/javascript" src="jquery-3.2.1.min.js"></script>
+<!-- <script> -->
+<!-- var json1; -->
+
+<!-- $.ajax({ -->
+	<!-- type:"GET", -->
+	<!-- async: false, -->
+	<!-- global: true, -->
+	<!-- url: 'station.json', -->
+	<!-- dataType: 'json', -->
+	<!-- success: function (data) { -->
+		<!-- json1 = data; -->
+		<!-- //alert(json1.host)  -->
+	<!-- }, -->
+	<!-- error:function(){console.log('UhOh!');}, -->
+<!-- }); -->
+<!-- </script> -->
+
+<script type="text/javascript">
+var value_longitude=document.getElementById('longitude');
+var value_latitude=document.getElementById('latitude');
+var value_station=document.getElementById('station_NO');
+value_station.value='0';
+var value_measure=document.getElementById('measure_point');
+value_measure.value='1';
+var value_measure=document.getElementById('theta');
+value_measure.value='60';
+
+
+//alert(value.value)
+var strFullPath=window.document.location.href;
+var strPath=window.document.location.pathname;
+var pos=strFullPath.indexOf(strPath);
+var prePath=strFullPath.substring(0,pos);
+prefullpath=strFullPath.substring(0,20);
+//document.write(location.href);
+
+
+
+// 百度地图API功能
+var map = new BMap.Map("allmap");
+map.centerAndZoom(new BMap.Point(116.404, 39.915), 11);
+//地图平移缩放控件
+map.addControl(new BMap.NavigationControl());
+// 添加带有定位的导航控件
+
+//浏览器定位
+<!-- var geolocation = new BMap.Geolocation(); -->
+<!-- geolocation.getCurrentPosition(function (r) { -->
+    <!-- if (this.getStatus() == BMAP_STATUS_SUCCESS) { -->
+        <!-- var mk = new BMap.Marker(r.point); -->
+        <!-- map.addOverlay(mk); -->
+        <!-- map.panTo(r.point); -->
+        <!-- //alert('您的位置：' + r.point.lng + ',' + r.point.lat); -->
+        <!-- var marker = new BMap.Marker(r.point);  // 创建标注 -->
+        <!-- map.addOverlay(marker);              // 将标注添加到地图中 -->
+    <!-- } -->
+    <!-- else { -->
+        <!-- alert('failed' + this.getStatus()); -->
+    <!-- } -->
+<!-- }, {enableHighAccuracy: true}) -->
+
+
+<!-- map.addEventListener("click",function(e){ -->
+	<!-- //alert(e.point.lng + "," + e.point.lat); -->
+	<!-- var marker = new BMap.Marker(e.point);  // 创建标注 -->
+	<!-- map.addOverlay(marker);              // 将标注添加到地图中 -->
+<!-- }); -->
+
+
+
+//比例尺控件
+map.addControl(new BMap.ScaleControl());    
+//缩略地图控件
+map.addControl(new BMap.OverviewMapControl());   
+//地图类型控件
+map.addControl(new BMap.MapTypeControl());
+//右小角缩略图
+//map.addControl(new BMap.OverviewMapControl());
+//map.setCurrentCity("北京"); // 仅当设置城市信息时，MapTypeControl的切换功能才能可用
+
+map.enableScrollWheelZoom();   //启用滚轮放大缩小，默认禁用
+map.enableContinuousZoom();    //启用地图惯性拖拽，默认禁用
+
+var p1 = new BMap.Point(116.301934,39.977552);
+var p2 = new BMap.Point(116.201934,39.877552);
+<!-- var marker = new BMap.Marker(p1);  // 创建标注 -->
+<!-- map.addOverlay(marker);              // 将标注添加到地图中 -->
+<!-- var label = new BMap.Label("1",{offset:new BMap.Size(20,-10)}); -->
+<!-- marker.setLabel(label); -->
+<!-- marker.setTitle('1');  -->
+
+<!-- var marker1 = new BMap.Marker(p2);  // 创建标注 -->
+<!-- map.addOverlay(marker1); -->
+
+<!-- var label1=marker.getLabel().content; -->
+<!-- alert(label1); -->
+<!-- var title1=marker.getTitle(); //因为直接标注的就是string 所以直接取就可以了 -->
+//alert(title1);
+//alert(typeof(Number(a)));
+
+//在地图上画方向箭头 START
+<!-- var polyline=new BMap.Polyline(); -->
+<!-- var linePoint=polyline.getPath(); -->
+<!-- var pixelStart=map.pointToPixel(linePoint); -->
+//alert (pixelStart[0]);
+
+// 角度 经纬度 距离 换算
+var R=6378137;
+var dx=(p2.lng*Math.PI/180-p1.lng*Math.PI/180)*(R*Math.cos(p1.lat*Math.PI/180));
+var dy=(p2.lat*Math.PI/180-p1.lat*Math.PI/180)*R
+var jiajiao=Math.atan2(dy,dx)*180.0/Math.PI;
+var juli=Math.sqrt(dx*dx+dy*dy);
+//alert ([jiajiao,juli]);
+
+var theta=60*Math.PI/180;  //相对于箭尾的偏角
+var L=10000;  //设置箭有多长
+var angleValue=Math.PI/7;  //箭头与箭柄夹角
+var length=10;   //箭尖的长度
+var L1=L*3; //如果只是画直线，画多长
+//addArrow(p1,theta,length,angleValue,L);
+//addLine(p1,theta,L1)
+
+function addLine(p1,theta,L){
+	var new_lng=((L/(Math.sqrt(Math.tan(theta)*Math.tan(theta)+1)*R*Math.cos(p1.lat*Math.PI/180)))+p1.lng*Math.PI/180)*180/Math.PI;
+	var new_lat=((L*Math.tan(theta)/(Math.sqrt(Math.tan(theta)*Math.tan(theta)+1)*R))+p1.lat*Math.PI/180)*180/Math.PI;
+	//alert([new_lng,new_lat]);
+	new_p=new BMap.Point(new_lng,new_lat);
+	<!-- var new_marker= new BMap.Marker(new_p);  // 创建标注 -->
+	<!-- map.addOverlay(new_marker); -->
+
+	var polyline = new BMap.Polyline([
+		p1,
+		new_p,
+		], {strokeColor:"red", strokeWeight:2, strokeOpacity:0.6});   //创建折线
+	map.addOverlay(polyline);   //增加折线
+}
+
+function addLine1(){
+	if(document.getElementById("longitude").value != "" && document.getElementById("latitude").value != ""){
+		//map.clearOverlays();  #清除地图上的覆盖物
+		var p1 = new BMap.Point(Number(document.getElementById("longitude").value),Number(document.getElementById("latitude").value));
+		var marker =new BMap.Marker(p1,{icon:myIcon3});
+		map.addOverlay(marker);
+		var theta=Number(document.getElementById("theta").value)*Math.PI/180;
+		var L=10000*3;
+		if(Math.abs(theta)<=0.5*Math.PI){
+		var new_lng=((L/(Math.sqrt(Math.tan(theta)*Math.tan(theta)+1)*R*Math.cos(p1.lat*Math.PI/180)))+p1.lng*Math.PI/180)*180/Math.PI;
+		var new_lat=((L*Math.tan(theta)/(Math.sqrt(Math.tan(theta)*Math.tan(theta)+1)*R))+p1.lat*Math.PI/180)*180/Math.PI;
+		alert([new_lng,new_lat]);
+		}
+		else{
+		var new_lng=((-1*L/(Math.sqrt(Math.tan(theta)*Math.tan(theta)+1)*R*Math.cos(p1.lat*Math.PI/180)))+p1.lng*Math.PI/180)*180/Math.PI;
+		var new_lat=((-1*L*Math.tan(theta)/(Math.sqrt(Math.tan(theta)*Math.tan(theta)+1)*R))+p1.lat*Math.PI/180)*180/Math.PI;
+		alert([new_lng,new_lat]);
+		}
+		//alert([new_lng,new_lat]);
+		new_p=new BMap.Point(new_lng,new_lat);
+		<!-- var new_marker= new BMap.Marker(new_p);  // 创建标注 -->
+		<!-- map.addOverlay(new_marker); -->
+
+		var polyline = new BMap.Polyline([
+			p1,
+			new_p,
+			], {strokeColor:"red", strokeWeight:2, strokeOpacity:0.6});   //创建折线
+		map.addOverlay(polyline);   //增加折线
+	}
+}
+
+function addArrow(p1,theta,length,angleValue,L){
+	var new_lng=((L/(Math.sqrt(Math.tan(theta)*Math.tan(theta)+1)*R*Math.cos(p1.lat*Math.PI/180)))+p1.lng*Math.PI/180)*180/Math.PI;
+	var new_lat=((L*Math.tan(theta)/(Math.sqrt(Math.tan(theta)*Math.tan(theta)+1)*R))+p1.lat*Math.PI/180)*180/Math.PI;
+	//alert([new_lng,new_lat]);
+	new_p=new BMap.Point(new_lng,new_lat);
+	var new_marker= new BMap.Marker(new_p);  // 创建标注
+	map.addOverlay(new_marker);
+
+	var polyline = new BMap.Polyline([
+		p1,
+		new_p, 
+		], {strokeColor:"blue", strokeWeight:3, strokeOpacity:1});   //创建折线
+	map.addOverlay(polyline);   //增加折线
+
+	var linePoint=polyline.getPath();
+	var arrowCount=linePoint.length;
+	for (var i=1;i<arrowCount;i++){
+		var pixelStart=map.pointToPixel(linePoint[i-1]);
+		var pixelEnd=map.pointToPixel(linePoint[i]);
+		var angle=angleValue;//箭头和主线的夹角
+		var r=length; // r/Math.sin(angle)代表箭头长度
+		var delta=0; //主线斜率，垂直时无斜率
+		var param=0; //代码简洁考虑
+		var pixelTemX,pixelTemY;//临时点坐标
+		var pixelX,pixelY,pixelX1,pixelY1;//箭头两个点
+		if(pixelEnd.x-pixelStart.x==0){ //斜率不存在是时
+			pixelTemX=pixelEnd.x;
+			if(pixelEnd.y>pixelStart.y){
+				pixelTemY=pixelEnd.y-r;
+			}
+			else{
+				pixelTemY=pixelEnd.y+r;
+			}
+			//已知直角三角形两个点坐标及其中一个角，求另外一个点坐标算法
+			pixelX=pixelTemX-r*Math.tan(angle); 
+			pixelX1=pixelTemX+r*Math.tan(angle);
+			pixelY=pixelY1=pixelTemY;
+		}
+		else  //斜率存在时
+		{
+			delta=(pixelEnd.y-pixelStart.y)/(pixelEnd.x-pixelStart.x);
+			param=Math.sqrt(delta*delta+1);
+
+			if((pixelEnd.x-pixelStart.x)<0) //第二、三象限
+			{
+				pixelTemX=pixelEnd.x+ r/param;
+				pixelTemY=pixelEnd.y+delta*r/param;
+			}
+			else//第一、四象限
+			{
+				pixelTemX=pixelEnd.x- r/param;
+				pixelTemY=pixelEnd.y-delta*r/param;
+			}
+			//已知直角三角形两个点坐标及其中一个角，求另外一个点坐标算法
+			pixelX=pixelTemX+ Math.tan(angle)*r*delta/param;
+			pixelY=pixelTemY-Math.tan(angle)*r/param;
+
+			pixelX1=pixelTemX- Math.tan(angle)*r*delta/param;
+			pixelY1=pixelTemY+Math.tan(angle)*r/param;
+		}
+
+		var pointArrow=map.pixelToPoint(new BMap.Pixel(pixelX,pixelY));
+		var pointArrow1=map.pixelToPoint(new BMap.Pixel(pixelX1,pixelY1));
+		var Arrow = new BMap.Polyline([
+			pointArrow,
+			linePoint[i],
+			pointArrow1
+		], {strokeColor:"blue", strokeWeight:3, strokeOpacity:1});
+		map.addOverlay(Arrow);
+	}
+}
+
+function addArrow1(){
+	if(document.getElementById("longitude").value != "" && document.getElementById("latitude").value != "" && document.getElementById("theta").value != ""){
+		//map.clearOverlays();  #清除地图上的覆盖物
+		//alert ('haha')
+		var p1 = new BMap.Point(Number(document.getElementById("longitude").value),Number(document.getElementById("latitude").value));
+		var marker =new BMap.Marker(p1,{icon:myIcon3});
+		map.addOverlay(marker);
+		var theta=Number(document.getElementById("theta").value)*Math.PI/180;
+		var L=10000;
+		var angleValue=Math.PI/7;
+		var length=10;
+		if(Math.abs(theta)<=0.5*Math.PI){
+		var new_lng=((L/(Math.sqrt(Math.tan(theta)*Math.tan(theta)+1)*R*Math.cos(p1.lat*Math.PI/180)))+p1.lng*Math.PI/180)*180/Math.PI;
+		var new_lat=((L*Math.tan(theta)/(Math.sqrt(Math.tan(theta)*Math.tan(theta)+1)*R))+p1.lat*Math.PI/180)*180/Math.PI;
+		//alert([new_lng,new_lat]);
+		}
+		else{
+		var new_lng=((-1*L/(Math.sqrt(Math.tan(theta)*Math.tan(theta)+1)*R*Math.cos(p1.lat*Math.PI/180)))+p1.lng*Math.PI/180)*180/Math.PI;
+		var new_lat=((-1*L*Math.tan(theta)/(Math.sqrt(Math.tan(theta)*Math.tan(theta)+1)*R))+p1.lat*Math.PI/180)*180/Math.PI;
+		//alert([new_lng,new_lat]);
+		}
+		//alert([new_lng,new_lat]);
+		<!-- alert((new_lng>p1)*2-1); -->
+		<!-- alert(Math.abs(-2)); -->
+		new_p=new BMap.Point(new_lng,new_lat);
+		<!-- var new_marker= new BMap.Marker(new_p);  // 创建标注 -->
+		<!-- map.addOverlay(new_marker); -->
+
+		var polyline = new BMap.Polyline([
+			p1,
+			new_p,
+			], {strokeColor:"blue", strokeWeight:3, strokeOpacity:1});   //创建折线
+		map.addOverlay(polyline);   //增加折线
+
+		var linePoint=polyline.getPath();
+		var arrowCount=linePoint.length;
+		for (var i=1;i<arrowCount;i++){
+			var pixelStart=map.pointToPixel(linePoint[i-1]);
+			var pixelEnd=map.pointToPixel(linePoint[i]);
+			var angle=angleValue;//箭头和主线的夹角
+			var r=length; // r/Math.sin(angle)代表箭头长度
+			var delta=0; //主线斜率，垂直时无斜率
+			var param=0; //代码简洁考虑
+			var pixelTemX,pixelTemY;//临时点坐标
+			var pixelX,pixelY,pixelX1,pixelY1;//箭头两个点
+			if(pixelEnd.x-pixelStart.x==0){ //斜率不存在是时
+				pixelTemX=pixelEnd.x;
+				if(pixelEnd.y>pixelStart.y){
+					pixelTemY=pixelEnd.y-r;
+				}
+				else{
+					pixelTemY=pixelEnd.y+r;
+				}
+				//已知直角三角形两个点坐标及其中一个角，求另外一个点坐标算法
+				pixelX=pixelTemX-r*Math.tan(angle); 
+				pixelX1=pixelTemX+r*Math.tan(angle);
+				pixelY=pixelY1=pixelTemY;
+			}
+			else  //斜率存在时
+			{
+				delta=(pixelEnd.y-pixelStart.y)/(pixelEnd.x-pixelStart.x);
+				param=Math.sqrt(delta*delta+1);
+
+				if((pixelEnd.x-pixelStart.x)<0) //第二、三象限
+				{
+					pixelTemX=pixelEnd.x+ r/param;
+					pixelTemY=pixelEnd.y+delta*r/param;
+				}
+				else//第一、四象限
+				{
+					pixelTemX=pixelEnd.x- r/param;
+					pixelTemY=pixelEnd.y-delta*r/param;
+				}
+				//已知直角三角形两个点坐标及其中一个角，求另外一个点坐标算法
+				pixelX=pixelTemX+ Math.tan(angle)*r*delta/param;
+				pixelY=pixelTemY-Math.tan(angle)*r/param;
+
+				pixelX1=pixelTemX- Math.tan(angle)*r*delta/param;
+				pixelY1=pixelTemY+Math.tan(angle)*r/param;
+			}
+
+			var pointArrow=map.pixelToPoint(new BMap.Pixel(pixelX,pixelY));
+			var pointArrow1=map.pixelToPoint(new BMap.Pixel(pixelX1,pixelY1));
+			var Arrow = new BMap.Polyline([
+				pointArrow,
+				linePoint[i],
+				pointArrow1
+			], {strokeColor:"blue", strokeWeight:3, strokeOpacity:1});
+			map.addOverlay(Arrow);
+		}
+	}
+}
+//END
+
+
+//设立不同的marker 
+var myIcon = new BMap.Icon("markers.png", new BMap.Size(23, 25), {  
+                        offset: new BMap.Size(10, 25), // 指定定位位置  
+                        imageOffset: new BMap.Size(0, 0 - 0 * 25) // 设置图片偏移  
+                    });
+var myIcon1 = new BMap.Icon("markers.png", new BMap.Size(23, 25), {  
+                        offset: new BMap.Size(10, 25), // 指定定位位置  
+                        imageOffset: new BMap.Size(0, 0 - 10 * 25) // 设置图片偏移  
+                    });
+//var myIcon2 = new BMap.Icon("markers_orange.png", new BMap.Size(300,157));
+var myIcon2 = new BMap.Icon("markers.png", new BMap.Size(23, 25), {  
+                        offset: new BMap.Size(10, 25), // 指定定位位置  
+                        imageOffset: new BMap.Size(0, 0 - 12 * 25) // 设置图片偏移  
+                    });
+					
+var myIcon3 = new BMap.Icon("markers.png", new BMap.Size(23, 25), {  
+                        offset: new BMap.Size(10, 25), // 指定定位位置  
+                        imageOffset: new BMap.Size(0, 0 - 11 * 25) // 设置图片偏移  
+                    });  
+					
+var myIcon4 = new BMap.Icon("markers.png", new BMap.Size(23, 25), {  
+                        offset: new BMap.Size(10, 25), // 指定定位位置  
+                        imageOffset: new BMap.Size(0, 0 - 3 * 25) // 设置图片偏移  
+                    }); 
+
+//var markerN = new BMap.Marker(p2,{icon:myIcon});  // 创建标注
+//var marker1 = new BMap.Marker(p2);  // 创建标注
+//map.addOverlay(markerN);              // 将标注添加到地图中
+
+
+
+//添加覆盖物类别
+//创建小狐狸
+<!-- var pt = new BMap.Point(116.417, 39.909); -->
+<!-- var marker2 = new BMap.Marker(pt,{icon:myIcon});  // 创建标注 -->
+<!-- map.addOverlay(marker2);              // 将标注添加到地图中 -->
+
+<!-- var pt1 = new BMap.Point(116.317, 39.809); -->
+<!-- var marker3 = new BMap.Marker(pt1,{icon:myIcon1});  // 创建标注 -->
+<!-- //var marker3 = new BMap.Marker(pt1); -->
+<!-- map.addOverlay(marker3);              // 将标注添加到地图中  -->
+
+//是否有测量点被点击,初始时设置为0
+var one_click_station=0;
+var one_click_measure=0;
+var one_click_direction=0;
+//保存上一个被点击的点marker,只保留一个点处于点击状态（颜色不同）
+var premarker_station;
+var premarker_measure;
+var premarker_direction;
+
+//改变title
+function change_title(){
+	document.title=''
+	}
+
+// 加入测量点
+function add_point(){
+	if(document.getElementById("longitude").value != "" && document.getElementById("latitude").value != ""){
+		//map.clearOverlays();  #清除地图上的覆盖物
+		var new_point = new BMap.Point(Number(document.getElementById("longitude").value),Number(document.getElementById("latitude").value));
+		var marker =new BMap.Marker(new_point,{icon:myIcon3});
+		//var marker = new BMap.Marker(new_point);  // 创建标注
+		marker.addEventListener("click",attribute_point);   //注册事件
+		map.addOverlay(marker);              // 将标注添加到地图中
+		var title=document.getElementById("measure_point").value;
+		marker.setTitle(title);
+		//map.panTo(new_point);
+	}
+}
+
+//加入检测站
+function add_station(){
+	if(document.getElementById("longitude").value != "" && document.getElementById("latitude").value != ""){
+		//map.clearOverlays();  #清除地图上的覆盖物
+		var new_point = new BMap.Point(Number(document.getElementById("longitude").value),Number(document.getElementById("latitude").value));
+		var marker = new BMap.Marker(new_point,{icon:myIcon});  // 创建标注
+		marker.addEventListener("click",attribute_station);   //注册事件
+		map.addOverlay(marker);              // 将标注添加到地图中
+		var title=document.getElementById("station_NO").value;
+		marker.setTitle(title);
+	}
+}
+
+//加入测向点
+function add_direction(){
+	if(document.getElementById("longitude").value != "" && document.getElementById("latitude").value != ""){
+		//map.clearOverlays();  #清除地图上的覆盖物
+		var new_point = new BMap.Point(Number(document.getElementById("longitude").value),Number(document.getElementById("latitude").value));
+		var marker = new BMap.Marker(new_point,{icon:myIcon});  // 创建标注
+		marker.addEventListener("click",attribute_direction);   //注册事件
+		map.addOverlay(marker);              // 将标注添加到地图中
+		var title=document.getElementById("direction_point").value;
+		marker.setTitle(title);
+	}
+}
+
+function attribute_point(e){
+	var p = e.target;
+	alert("marker的位置是" + p.getPosition().lng + "," + p.getPosition().lat);
+	document.getElementById('longitude').value=p.getPosition().lng;
+	document.getElementById('latitude').value=p.getPosition().lat;
+	document.getElementById('measure_point').value=p.getTitle();
+	p.setIcon(myIcon2);
+	if ((one_click_measure==1)&&(premarker_measure!=p)){
+		premarker_measure.setIcon(myIcon3)
+	}
+	premarker_measure=p;
+	one_click_measure=1;
+	
+	var title=document.getElementById("measure_point").value;
+	var type='p';
+	document.title=title+type;
+	}
+
+function attribute_station(e){
+	var p = e.target;
+	alert("marker的位置是" + p.getPosition().lng + "," + p.getPosition().lat);
+	document.getElementById('measure_point').value=p.getPosition().lng;
+	document.getElementById('latitude').value=p.getPosition().lat;
+	document.getElementById('station_NO').value=p.getTitle();
+	p.setIcon(myIcon1);
+	if ((one_click_station==1)&&(premarker_station!=p)){
+		premarker_station.setIcon(myIcon)
+	}
+	premarker_station=p;
+	one_click_station=1;
+	
+	var title=document.getElementById("station_NO").value;
+	var type='s';
+	document.title=title+type;
+	}
+	
+function attribute_direction(e){
+	var p = e.target;
+	alert("marker的位置是" + p.getPosition().lng + "," + p.getPosition().lat);
+	document.getElementById('measure_point').value=p.getPosition().lng;
+	document.getElementById('latitude').value=p.getPosition().lat;
+	document.getElementById('direction_point').value=p.getTitle();
+	p.setIcon(myIcon4);
+	if ((one_click_station==1)&&(premarker_station!=p)){
+		premarker_station.setIcon(myIcon)
+	}
+	premarker_direction=p;
+	one_click_direction=1;
+	
+	var title=document.getElementById("direction_point").value;
+	var type='d';
+	document.title=title+type;
+	}
+
+</script>
+
+</body>
+</html>
