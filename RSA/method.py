@@ -322,7 +322,7 @@ def detectNoise(rsa300,startFreq,endFreq,rbw,vbw):
 
    # Peak power and frequency calculations
    min_peak = min(trace)
-   threshold = min_peak + 10
+   threshold = min_peak + 5
    # Peak power and frequency calculations
    trace1 = [data for data in trace if data < threshold]
    ave = np.mean(trace1)
@@ -330,27 +330,45 @@ def detectNoise(rsa300,startFreq,endFreq,rbw,vbw):
 
 #预测带宽
 def bandwidth(peakPower,peakFreq,trace,freq):
-    peak_index1 = np.argmax(trace)
-    peak_index2 = np.argmax(trace) 
-    a1 = 0
-    a2 = len(trace) - 1
-    while peak_index1>0:
-        if trace[peak_index1]>peakPower-3:
-            pass
-        else:
-            a1 = peak_index1
-            break
-        peak_index1 -= 1
-    while peak_index2<len(trace):
-        if trace[peak_index2]>peakPower-3:
-            pass
-        else:
-            a2 = peak_index2
-            break
-        peak_index2 += 1
-    bandWidth = freq[a2] - freq[a1]
-    freq_cf = freq[a1]+bandWidth/2
-    return freq_cf, bandWidth
+	peak_index1 = np.argmax(trace)
+	peak_index2 = np.argmax(trace) 
+	a1 = 0
+	a2 = len(trace) - 1
+	#print ('1:',a1,a2)
+	while peak_index1>0:
+		if trace[peak_index1]>peakPower-3:
+			pass
+		else:
+			a2 = peak_index1
+			break
+		peak_index1 -= 1
+	while peak_index2<len(trace):
+		if trace[peak_index2]>peakPower-3:
+			pass
+		else:
+			a1 = peak_index2
+			break
+		peak_index2 += 1
+	
+	# print ('2:',a1,a2)
+	# peak_index3=a2
+	# peak_index4=a1
+	# while peak_index4<a2:
+		# if trace[peak_index4]>trace[a1]+3:
+			# break;
+		# peak_index4+=1
+	# while peak_index3>a1:
+		# if trace[peak_index3]>trace[a2]+3:
+			# break;
+		# peak_index3-=1
+
+	# a2=peak_index3
+	# a1=peak_index4
+	# print ('3:',a1,a2)
+
+	bandWidth = freq[a1] - freq[a2]
+	freq_cf = freq[a1]+bandWidth/2
+	return freq_cf, bandWidth
 
 #预测带宽2
 def bandwidth2(peakPower,peakNum,trace,freq):
@@ -360,7 +378,7 @@ def bandwidth2(peakPower,peakNum,trace,freq):
 	a1 = 0
 	a2 = len(trace) - 1
 	while peak_index1>0:
-		if trace[peak_index1]>peakPower-3:
+		if trace[peak_index1]>peakPower-6:
 			pass
 		else:
 			a1 = peak_index1
@@ -368,13 +386,54 @@ def bandwidth2(peakPower,peakNum,trace,freq):
 		peak_index1 -= 1
 	#print ('peak_index1:',peak_index1)
 	while peak_index2<len(trace):
-		if trace[peak_index2]>peakPower-3:
+		if trace[peak_index2]>peakPower-6:
 			pass
 		else:
 			a2 = peak_index2
 			break
 		peak_index2 += 1
+
+	peak_index3=a2
+	peak_index4=a1
+	while peak_index4<=a2:
+		if trace[peak_index4]>trace[a1]+3:
+			break;
+		peak_index4+=1
+	while peak_index3>=a1:
+		if trace[peak_index3]>trace[a2]+3:
+			break;
+		peak_index3-=1
+
+	a2=peak_index3
+	a1=peak_index4
 	#print ('peak_index2:',peak_index2)
+	bandWidth = freq[a2] - freq[a1]
+	freq_cf = freq[a1]+bandWidth/2
+	return freq_cf, bandWidth
+
+#预测带宽3
+def bandwidth3(peakPower,peakFreq,trace,freq):
+	trace_max=max(trace)
+	a1 = 0
+	a2 = len(trace) - 1
+	peak_index1 = a2
+	peak_index2 = a1
+	#print ('1:',a1,a2)
+	while peak_index1>0:
+		if trace[peak_index1]<trace_max-6:
+			pass
+		else:
+			a2 = peak_index1
+			break
+		peak_index1 -= 1
+	while peak_index2<len(trace):
+		if trace[peak_index2]<trace_max-6:
+			pass
+		else:
+			a1 = peak_index2
+			break
+		peak_index2 += 1
+
 	bandWidth = freq[a2] - freq[a1]
 	freq_cf = freq[a1]+bandWidth/2
 	return freq_cf, bandWidth
@@ -525,22 +584,6 @@ def spectrum1(rsa300,average, startFreq, stopFreq, span, rbw,vbw, str_time, coun
 	rsa300.SPECTRUM_SetSettings(specSet)
 	rsa300.SPECTRUM_GetSettings(byref(specSet))
 
-	# uncomment this if you want to print out the spectrum settings
-
-	# print out spectrum settings for a sanity check
-	# print('Span: ' + str(specSet.span))
-	# print('RBW: ' + str(specSet.rbw))
-	# print('VBW Enabled: ' + str(specSet.enableVBW))
-	# print('VBW: ' + str(specSet.vbw))
-	# print('Trace Length: ' + str(specSet.traceLength))
-	# print('Window: ' + str(specSet.window))
-	# print('Vertical Unit: ' + str(specSet.verticalUnit))
-	# print('Actual Start Freq: ' + str(specSet.actualStartFreq))
-	# print('Actual End Freq: ' + str(specSet.actualStopFreq))
-	# print('Actual Freq Step Size: ' + str(specSet.actualFreqStepSize))
-	# print('Actual RBW: ' + str(specSet.actualRBW))
-	# print('Actual VBW: ' + str(specSet.actualVBW))
-
 	# initialize variables for GetTrace
 	traceArray = c_float * specSet.traceLength
 	traceData = traceArray()
@@ -567,7 +610,7 @@ def spectrum1(rsa300,average, startFreq, stopFreq, span, rbw,vbw, str_time, coun
 	# Peak power and frequency calculations
 	peakPower = np.amax(trace)
 	peakPowerFreq = freq[np.argmax(trace)]
-	print('Peak power in spectrum: %4.3f dBmV @ %d Hz' % (peakPower, peakPowerFreq))
+	#print('Peak power in spectrum: %4.3f dBmV @ %d Hz' % (peakPower, peakPowerFreq))
 
 	# plot the spectrum trace (optional)
 	#axes_score.plot(freq, traceData)  #图换1
@@ -582,13 +625,16 @@ def spectrum1(rsa300,average, startFreq, stopFreq, span, rbw,vbw, str_time, coun
 	b = []  # 存储频率
 	c = []
 	d = []  # 存储电平
+	freq_list=[]
+	freq_all=[]
 	peakPower=[] #记录峰值
 	peakNum=[]  #记录峰值对应的横坐标
 	# 得到局部数据
 	for i in range(801):
-		if traceData[i] > average + 10:
+		if traceData[i] > average + 6:
 			a.append(i)
 			c.append(trace[i])
+			freq_list.append(freq[i])
 			#print (a)
 		elif traceData[i]<average+4:
 			if a:
@@ -597,8 +643,12 @@ def spectrum1(rsa300,average, startFreq, stopFreq, span, rbw,vbw, str_time, coun
 				d.append(c)
 				peakNum.append(a[np.argmax(c)])
 				peakPower.append(np.max(c))
+				freq_all.append(freq_list)
 				a = []
 				c = []
+				freq_list=[]
+	#print (b)
+	#print (d)
 	
 	#print ('the length of b is:',len(b))
 	#print (average,d,b)
@@ -614,6 +664,7 @@ def spectrum1(rsa300,average, startFreq, stopFreq, span, rbw,vbw, str_time, coun
 	j1 = 0
 	point=[] #画框在整个界面的坐标信息，用于鼠标坐标相应
 	point_xy=[]  #画框的坐标信息 ，用于画框
+	print('average:',average)
 	for i in range(len(b)):
 		# 跳过空数据
 		if len(b[i]) > 1:
@@ -634,13 +685,16 @@ def spectrum1(rsa300,average, startFreq, stopFreq, span, rbw,vbw, str_time, coun
 			# plt.text((b[i][0]+b[i][-1])/2,s3_y,'%s'%j1)
 			
 			freq_len=freq[-1]-freq[0]
+			if freq_len>20e6:
+				#print (average,d[i])
+				break;
 			#print ('changdu:',freq_len)
 			u_x=200000
 			u_y=20   #画图与实际的偏置
 			point_x1=540*(s1_x-u_x-freq[0])/freq_len+88
 			point_x2=540*(s2_x+u_x-freq[0])/freq_len+88
-			point_y1=308*(-s1_y+20)/80+48
-			point_y2=308*(-s3_y+20)/80+48
+			point_y1=308*(-s1_y+20)/70+48
+			point_y2=308*(-s3_y+20)/70+48
 			point.append([point_x1,point_x2,point_y2,point_y1])
 			point_xy.append([s1_x-u_x,s2_x+u_x,s1_y,s3_y])
 			# axes_score.plot([s1_x, s1_x], [s1_y, s3_y])
@@ -648,21 +702,6 @@ def spectrum1(rsa300,average, startFreq, stopFreq, span, rbw,vbw, str_time, coun
 			# axes_score.plot([s2_x, s2_x], [s3_y, s1_y])
 			# axes_score.plot([s1_x, s2_x], [s1_y, s1_y])
 			# axes_score.text((b[i][0]+b[i][-1])/2,s3_y,'%s'%j1)
-			
-
-	# plt.xlabel('Frequency (Hz)')
-	# plt.ylabel('Amplitude (dBmV)')
-	# plt.title('Spectrum')
-
-	# # BONUS clean up plot axes
-	# xmin = np.amin(freq)
-	# xmax = np.amax(freq)
-	# #plt.xlim(xmin, xmax)
-	# axes_score.set_xlim(xmin, xmax)
-	# ymin = np.amin(trace) - 10
-	# ymax = np.amax(trace) + 10
-
-	#plt.show()
 	# 分别绘制局部的子图
 	j = 0
 	Sub_Spectrum=[]     #存当前扫描频率
@@ -672,6 +711,7 @@ def spectrum1(rsa300,average, startFreq, stopFreq, span, rbw,vbw, str_time, coun
 	Sub_cf_channel=[]   #存峰值 （无用，和Sub_peak重复）
 	Sub_band=[]         #存带宽
 	Sub_peak=[]         #存峰值
+	Sub_illegal=[]      #存当前信号段合法与否
 	#print (len(b))
 	for i in range(len(b)):
 		if len(b[i]) > 1:
@@ -695,7 +735,8 @@ def spectrum1(rsa300,average, startFreq, stopFreq, span, rbw,vbw, str_time, coun
 
 			#print ('have signals:',i+1)
 			#band_t, peak_t, peak_tf ,draw_Sub_Spectrum,draw_Sub_Spectrum2= spectrum0(rsa300,b_f, e_f, str_time, j, count, str_tt1, str_tt2,longitude,latitude,rbw,vbw)
-			''' plt.plot(b[i], d[i])
+			''' 
+			plt.plot(b[i], d[i])
 			plt.xlabel('Frequency (Hz)')
 			plt.ylabel('Amplitude (dBmV)')
 			plt.title('Spectrum')
@@ -714,12 +755,14 @@ def spectrum1(rsa300,average, startFreq, stopFreq, span, rbw,vbw, str_time, coun
 			Sub_peak.append(peak_t)
 			# 输出监测到的信号的真实信号带宽，峰值信息，中心频率
 			#print(band_t, peak_t, peak_tf)
-			freq_cf, band = bandwidth2(peakPower[i], peakNum[i], trace, freq)  # 求带宽
+			#freq_cf, band = bandwidth2(peakPower[i], peakNum[i], trace, freq)  # 求带宽
+			#print (peakPower[i], freq[peakNum[i]], d[i], freq_all[i])
+			freq_cf, band = bandwidth3(peakPower[i], freq[peakNum[i]], d[i], freq_all[i])  # 求带宽
 			Sub_band.append(band)
 			Sub_cf.append(freq_cf)
 			
 			#判断信号是否合法
-			illegal=0
+			illegal=0  #0表示非法
 			reflect_inf1={'0': [116.43, 39.9, 940*1e6, 950*1e6]}
 			#print ('reflect_inf:',reflect_inf1)
 			for i in reflect_inf1:
@@ -727,6 +770,7 @@ def spectrum1(rsa300,average, startFreq, stopFreq, span, rbw,vbw, str_time, coun
 				if freq_cf>=reflect_inf1[i][2] and freq_cf<=reflect_inf1[i][3]:
 					illegal=1
 					break
+			Sub_illegal.append(illegal)
 
 			#判断是否有重复频段,有则序号加1
 			if not Sub_cf_all:
@@ -751,16 +795,17 @@ def spectrum1(rsa300,average, startFreq, stopFreq, span, rbw,vbw, str_time, coun
 	Sub_Spectrum=freq  #频率
 	Sub_Spectrum2=trace  #信号
 	# 后台自动保存这一次扫频频谱数据
-	df1 = DataFrame({
-		'datetime':str_tt1,
-		'frequency': freq,
-		'power': trace
-	})
-
-	
+	# df1 = DataFrame({
+		# 'datetime':str_tt1,
+		# 'frequency': freq,
+		# 'power': trace
+	# })
+	head=['datetime']+['longitude']+['latitude']+list(freq)
+	data1=[str_tt1]+[longitude,latitude]+list(trace)
+	#print (Sub_band,Sub_cf_channel)
 
 	#draw_Spectrum_total=1
-	return df1,Sub_cf_channel,Sub_span,Sub_cf,Sub_band,Sub_Spectrum,Sub_Spectrum2,freq, traceData,point,point_xy,Sub_peak,num_signal
+	return head,data1,Sub_cf_channel,Sub_span,Sub_cf,Sub_band,Sub_Spectrum,Sub_Spectrum2,freq, traceData,point,point_xy,Sub_peak,num_signal,Sub_illegal
 # 返回原始的频谱数据
 
 # 一次细扫，扫每一个方框的信号；输入参数：起始频率、终止频率、任务名称，方框编号，计数、细扫的时间
@@ -906,7 +951,7 @@ def spectrum0(rsa300,startFreq, stopFreq, str_time, k, count, str_tt1, str_tt2,l
     freq_cf, band = bandwidth(peakPower, peakPowerFreq, trace, freq)  # 带宽
     # 存储细扫描数据
     # 将时间改成合法文件名形式
-    print (str_time)
+    #print (str_time)
     if not os.path.exists(os.getcwd()+"\\data1\\%s\\"%str_time):
         os.mkdir(os.getcwd()+"\\data1\\%s\\"%str_time)
     path = os.getcwd()+"\\data1\\%s\\" % str_time + str_tt2 + "spectrum%d.csv" % k
@@ -1407,7 +1452,7 @@ def uav(rsa,t_r, test_No, deviceSerial, anteid,rbw,vbw):  # 参数是持续时�
     con.close()
     if a==[]:
         a.append(t_r)
-    print(a,b,c)
+    #print(a,b,c)
     return a,b,c
 	
 
@@ -1438,10 +1483,10 @@ def spectrum_occ(start_time,stop_time,task_name,freq_start,freq_stop):
 def plot_spectrum_occ(start_time,stop_time,task_name,freq_start,freq_stop):
     starttime = datetime.datetime.strptime(str(start_time), "%Y-%m-%d %H:%M:%S")
     stoptime = datetime.datetime.strptime(str(stop_time), "%Y-%m-%d %H:%M:%S")
-    print (starttime)
-    print (stoptime)
+    #print (starttime)
+    #print (stoptime)
     delta = int((stoptime - starttime).seconds)  #先以s为单位
-    print (delta)
+    #print (delta)
     occ1 = []
     figure_score = Figure((9,2),100)
     axes_score = figure_score.add_subplot(111,facecolor='w')
@@ -1453,13 +1498,13 @@ def plot_spectrum_occ(start_time,stop_time,task_name,freq_start,freq_stop):
         e_t = starttime + datetime.timedelta(seconds = (i+1))
         occ1_1 = spectrum_occ(s_t,e_t,task_name,freq_start,freq_stop)
         occ1.append(occ1_1)
-    print('occ1',occ1)
+    #print('occ1',occ1)
     time_slot=np.linspace(1,delta,delta)
     dates=[]
     for i in range(delta):
         dates.append(str(starttime+datetime.timedelta(seconds=time_slot[i])))
     a=[datetime.datetime.strptime(d,"%Y-%m-%d %H:%M:%S") for d in dates]
-    print (a)
+    #print (a)
     axes_score.xaxis.set_major_formatter(mdates.DateFormatter("%Y-%m-%d %H:%M:%S"))
     axes_score.xaxis.set_major_locator(mdates.SecondLocator())
     if len(a)>=2:
@@ -1509,32 +1554,28 @@ def channel_occ(start_time,stop_time,task_name,freq_start,freq_stop):
 
 def read_file(file):
     path = os.getcwd()+"\\data1\\"+file
-    retain_time = 0
-    for filename in os.listdir(path):
-        if filename[-5] == 's':
-            retain_time = int(filename[27:-5])
-            break
     file1 = file[:10]+' '+file[11:13]+':'+file[14:16]+':'+file[17:19]
-    print (file1)
+    file2 = file[21:31]+' '+file[32:34]+':'+file[35:37]+':'+file[38:40]
+    #print (file1)
+    retain_time=int(file[48:]) #持续时间
     start_time = datetime.datetime.strptime(file1, "%Y-%m-%d %H:%M:%S")
-    end_time = start_time + datetime.timedelta(seconds=retain_time)
-    sql = "select startFreq,endFreq from minitor_task where Task_Name='%s'"%(file)
-    print (sql)
+    end_time = datetime.datetime.strptime(file2, "%Y-%m-%d %H:%M:%S")
+    sql = "select startFreq,endFreq from minitor_task where Task_Name='%s'"%(file[0:19])
+    #print (sql)
     con = mdb.connect('localhost', 'root', 'cdk120803', 'ceshi1')
     c = pandas.read_sql(sql, con)
-    print (c)
+    #print (c)
     con.commit()
     con.close()
     start_freq = c['startFreq'][0]
     end_freq = c['endFreq'][0]
-
     return start_time,end_time,retain_time,float(start_freq),float(end_freq),path
 
 
 # 导入导出数据
 # 粗扫描，返回某一次任务的初试频率和终止频率以及频率和功率矩阵,起始时间和终止时间
 def importData_cu(task_name,file_name,raw_path):#task_name就是文件夹的名字，filename就是粗扫的csv文件名字，raw_path就是文件存储的路径
-    sql = "select startFreq,endFreq,Task_B,Task_E from minitor_task where Task_Name='%s'"%(task_name)
+    sql = "select startFreq,endFreq,Task_B,Task_E from minitor_task where Task_Name='%s'"%(task_name[0:19])
     con=mdb.connect(mysql_config['host'],mysql_config['user'],mysql_config['password'],mysql_config['database'])
     #con = mdb.connect('localhost', 'root', 'cdk120803', 'ceshi1')
     c_cu = pandas.read_sql(sql, con)
@@ -1651,8 +1692,8 @@ def find_direction(rsa300,freq):
 	specSet.traceLength = c_int(801)
 	# specSet.window =
 	specSet.verticalUnit = c_int(4)
-	specSet.actualStartFreq = c_double(freq-0.5e6)
-	specSet.actualStopFreq = c_double(freq+0.5e6)
+	specSet.actualStartFreq = c_double(freq-0.1e6)
+	specSet.actualStopFreq = c_double(freq+0.1e6)
 	# specSet.actualFreqStepSize =c_double(50000.0)
 	# specSet.actualRBW =
 	# specSet.actualVBW =
@@ -2039,7 +2080,7 @@ def rmbt_freq_occupancy(span,start_time,end_time,startFreq,stopFreq,longitude,la
     z['threshold'] = 6
     #存入BLOB文件需要中间缓存文件
     file_path=os.getcwd()+"\\cache\\"
-    print (file_path)
+    #print (file_path)
     if not os.path.exists(file_path):
         os.mkdir(file_path)
     path1=file_path+'cache.csv'
@@ -2322,174 +2363,4 @@ def get_gnss_message(rsa):
                     print (longitude,latitude,height)
                     break;
     return [longitude,latitude,height]
-
-
-
-
-
-
-
-
-
-
-# ###################################################################################################################################
-# # 用DPX实现MAXHOLD无人机检测
-# def config_DPX(rsa,cf=1e9, refLevel=0, span=40e6, rbw=300e3):
-    # # os.chdir("E:/项目/洪（私）/pro/RSA_API/lib/x64")
-    # # rsa = WinDLL("RSA_API.dll")
-    # class VerticalUnitType:
-        # def __init__(self):
-            # self.VerticalUnit_dBm = c_int(0)
-            # self.VerticalUnit_Watt = c_int(1)
-            # self.VerticalUnit_Volt = c_int(2)
-            # self.VerticalUnit_Amp = c_int(3)
-
-    # class DPX_SettingStruct(Structure):
-        # _fields_ = [('enableSpectrum', c_bool),
-                    # ('enableSpectrogram', c_bool),
-                    # ('bitmapWidth', c_int32),
-                    # ('bitmapHeight', c_int32),
-                    # ('traceLength', c_int32),
-                    # ('decayFactor', c_float),
-                    # ('actualRBW', c_double)]
-
-    # VerticalUnitType = VerticalUnitType()
-    # yTop = refLevel
-    # yBottom = yTop - 100
-    # yUnit = VerticalUnitType.VerticalUnit_dBm
-
-    # dpxSet = DPX_SettingStruct()
-    # rsa.CONFIG_SetCenterFreq(c_double(cf))
-    # rsa.CONFIG_SetReferenceLevel(c_double(refLevel))
-
-    # rsa.DPX_SetEnable(c_bool(True))
-    # rsa.DPX_SetParameters(c_double(span), c_double(rbw), c_int(801), c_int(1),
-                          # yUnit, c_double(yTop), c_double(yBottom), c_bool(False),
-                          # c_double(1.0), c_bool(False))
-    # rsa.DPX_SetSogramParameters(c_double(1e-3), c_double(1e-3),
-                                # c_double(refLevel), c_double(refLevel - 100))
-    # rsa.DPX_Configure(c_bool(True), c_bool(True))
-
-    # rsa.DPX_SetSpectrumTraceType(c_int32(0), c_int(2))
-    # rsa.DPX_SetSpectrumTraceType(c_int32(1), c_int(4))
-    # rsa.DPX_SetSpectrumTraceType(c_int32(2), c_int(0))
-
-    # rsa.DPX_GetSettings(byref(dpxSet))
-    # dpxFreq = np.linspace((cf - span / 2), (cf + span / 2), dpxSet.bitmapWidth)
-    # dpxAmp = np.linspace(yBottom, yTop, dpxSet.bitmapHeight)
-    # return dpxFreq, dpxAmp
-
-
-# def acquire_dpx_frame(rsa):
-
-    # class DPX_FrameBuffer(Structure):
-        # _fields_ = [('fftPerFrame', c_int32),
-                    # ('fftCount', c_int64),
-                    # ('frameCount', c_int64),
-                    # ('timestamp', c_double),
-                    # ('acqDataStatus', c_uint32),
-                    # ('minSigDuration', c_double),
-                    # ('minSigDurOutOfRange', c_bool),
-                    # ('spectrumBitmapWidth', c_int32),
-                    # ('spectrumBitmapHeight', c_int32),
-                    # ('spectrumBitmapSize', c_int32),
-                    # ('spectrumTraceLength', c_int32),
-                    # ('numSpectrumTraces', c_int32),
-                    # ('spectrumEnabled', c_bool),
-                    # ('spectrogramEnabled', c_bool),
-                    # ('spectrumBitmap', POINTER(c_float)),
-                    # ('spectrumTraces', POINTER(POINTER(c_float))),
-                    # ('sogramBitmapWidth', c_int32),
-                    # ('sogramBitmapHeight', c_int32),
-                    # ('sogramBitmapSize', c_int32),
-                    # ('sogramBitmapNumValidLines', c_int32),
-                    # ('sogramBitmap', POINTER(c_uint8)),
-                    # ('sogramBitmapTimestampArray', POINTER(c_double)),
-                    # ('sogramBitmapContainTriggerArray', POINTER(c_double))]
-
-    # frameAvailable = c_bool(False)
-    # ready = c_bool(False)
-    # fb = DPX_FrameBuffer()
-
-    # rsa.DEVICE_Run()
-    # rsa.DPX_Reset()
-
-    # while not frameAvailable.value:
-        # rsa.DPX_IsFrameBufferAvailable(byref(frameAvailable))
-        # while not ready.value:
-            # rsa.DPX_WaitForDataReady(c_int(100), byref(ready))
-    # rsa.DPX_GetFrameBuffer(byref(fb))
-    # rsa.DPX_FinishFrameBuffer()
-    # rsa.DEVICE_Stop()
-    # return fb
-
-
-# def extract_dpx_spectrum(fb):
-    # # When converting a ctypes pointer to a numpy array, we need to
-    # # explicitly specify its length to dereference it correctly
-    # dpxBitmap = np.array(fb.spectrumBitmap[:fb.spectrumBitmapSize])
-    # dpxBitmap = dpxBitmap.reshape((fb.spectrumBitmapHeight,
-                                   # fb.spectrumBitmapWidth))
-
-    # # Grab trace data and convert from W to dBmV
-    # # http://www.rapidtables.com/convert/power/Watt_to_dBm.htm
-    # # Note: fb.spectrumTraces is a pointer to a pointer, so we need to
-    # # go through an additional dereferencing step
-    # traces = []
-    # for i in range(3):
-        # traces.append(10 * np.log10(1000 * np.array(
-            # fb.spectrumTraces[i][:fb.spectrumTraceLength])) + 30)
-    # # specTrace2 = 10 * np.log10(1000*np.array(
-    # #     fb.spectrumTraces[1][:fb.spectrumTraceLength])) + 30
-    # # specTrace3 = 10 * np.log10(1000*np.array(
-    # #     fb.spectrumTraces[2][:fb.spectrumTraceLength])) + 30
-
-    # # return dpxBitmap, specTrace1, specTrace2, specTrace3
-    # return dpxBitmap, traces
-
-
-# def extract_dpxogram(fb):
-    # # When converting a ctypes pointer to a numpy array, we need to
-    # # explicitly specify its length to dereference it correctly
-    # dpxogram = np.array(fb.sogramBitmap[:fb.sogramBitmapSize])
-    # dpxogram = dpxogram.reshape((fb.sogramBitmapHeight,
-                                 # fb.sogramBitmapWidth))
-    # dpxogram = dpxogram[:fb.sogramBitmapNumValidLines, :]
-    # return dpxogram
-
-# ## 绘制maxhold的dxp图像
-# def dpx_example(rsa):
-
-    # cf = 842.5e6
-    # refLevel = -30
-    # span = 5e6
-    # rbw = 100e3
-
-    # dpxFreq, dpxAmp = config_DPX(rsa,cf, refLevel, span, rbw)
-    # fb = acquire_dpx_frame(rsa)
-
-    # dpxBitmap, traces = extract_dpx_spectrum(fb)
-    # dpxogram = extract_dpxogram(fb)
-    # numTicks = 11
-    # plotFreq = np.linspace(cf - span / 2.0, cf + span / 2.0, numTicks) / 1e9
-
-    # """################PLOT################"""
-    # #Plot out the three DPX spectrum traces
-    # # fig = plt.figure(1, figsize=(15, 10))
-    # #ax1 = fig.add_subplot(131)
-    # # plt.title('UAv')
-    # # plt.xlabel('Frequency (GHz)')
-    # # plt.ylabel('Amplitude (dBmV)')
-    # # dpxFreq /= 1e9
-    # # st1, = plt.plot(dpxFreq, traces[0])
-    # # st2, = plt.plot(dpxFreq, traces[1])
-    # # st3, = plt.plot(dpxFreq, traces[2])
-    # # plt.legend([st1], ['Max Hold'])
-    # # plt.set_xlim([dpxFreq[0], dpxFreq[-1]])
-
-    # #Show the colorized DPX display
-    # figure_score_uav_dpx,axes_score_uav_dpx=draw_picture(dpxFreq,traces[0],'UAV-Spectrum','Freqency/MHz','Amplitude/dBmV',4.4,6)
-    # axes_score_uav_dpx.set_xlim([dpxFreq[0],dpxFreq[-1]])
-    # # plt.show()
-    # return figure_score_uav_dpx,axes_score_uav_dpx
 
