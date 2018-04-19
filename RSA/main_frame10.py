@@ -151,6 +151,7 @@ class WorkerThread(threading.Thread):     #画实时监测信号动态图
 		deviceSerial=self.deviceSerial_true
 		anteid=self.anteid
 		trace1= [] #保存采集的信号
+		trace2= [] #保存一段时间的月报存储信号
 		count = 0
 		signal_count = 0 #检测出现子信号的段数
 		
@@ -192,65 +193,12 @@ class WorkerThread(threading.Thread):     #画实时监测信号动态图
 			count += 1
 			str_tt1 = str(datetime.datetime.now().strftime('%F %H:%M:%S'))  # 内部扫频的时刻
 			str_tt2 = str(datetime.datetime.now().strftime('%F-%H-%M-%S'))  # 作为内部细扫的文件名
-			head,data1,Sub_cf_channel,Sub_span,Sub_cf,Sub_band,Sub_Spectrum1,Sub_Spectrum2,freq1,traceData1,point,point_xy,Sub_peak,num_signal_new,Sub_illegal= method.spectrum1(self.rsa_true,average, startFreq, stopFreq, span, self.rbw, self.vbw, str_time, count, str_tt1, str_tt2,longitude_set,latitude_set,num_signal,Sub_cf_all)
+			head,data1,Sub_cf_channel,Sub_span,Sub_cf,Sub_band,Sub_Spectrum1,Sub_Spectrum2,freq1,traceData1,point,point_xy,Sub_peak,num_signal_new,Sub_illegal,Sub_type= method.spectrum1(self.rsa_true,average, startFreq, stopFreq, span, self.rbw, self.vbw, str_time, count, str_tt1, str_tt2,longitude_set,latitude_set,num_signal,Sub_cf_all)
 			num_signal=num_signal_new
 
 			#输出到底有多少信号
-			if count % 10000==0:
+			if count % 100==0:
 				print (count)
-			
-			#####记录每次扫描的频谱信息
-			'''
-			self.window.point=point[:]
-			self.window.Sub_peak=Sub_peak[:]
-			self.window.Sub_span=Sub_span[:]
-			self.window.Sub_cf=Sub_cf[:]
-			self.window.Sub_band=Sub_band[:]
-			
-
-			
-			########################################
-			##另一种画图方法
-			
-			#先将当前帧保存的带宽，中心频率，峰值保存下来，然后与之前帧数据进行比对，保留不重复的
-			#判断是否有重复频段
-			Sub_cf_all_pre=Sub_cf_all[:]  #浅复制，(如果直接赋值则相当于引用）
-			is_band=0   #检测是否有不重复频谱出现
-			#print ('is_band:',is_band)
-			if Sub_cf:
-				if not Sub_cf_all:
-					print ('the first')
-					Sub_cf_all=Sub_cf[:]
-					Sub_band_all=Sub_band[:]
-					Sub_peak_all=Sub_peak[:]
-					is_band=1
-					# 数据库插入信道种类（不同频谱的信号）
-					# len=len(Sub_cf)
-					# num_signals=list(range(len))
-					# num_signal=num_signal+len
-				else:
-					#print (Sub_cf,Sub_cf_all_pre)
-					for cf_i in range(len(Sub_cf)):
-						divide_cf=array(Sub_cf_all_pre)-Sub_cf[cf_i]
-						#print (divide_cf)
-						#print (abs(divide_cf)<=0.5*1e6)
-						if sum(abs(divide_cf)<=0.5*1e6)==0:
-							is_band=1
-							Sub_cf_all.append(Sub_cf[cf_i])
-							Sub_band_all.append(Sub_band[cf_i])
-							Sub_peak_all.append(Sub_peak[cf_i])
-						
-			
-			#如果有不重复频谱出现，则将当前段扫描数据存入
-			#print ('is_band:',is_band)
-			if is_band==1:
-				print (u'有不重复频谱出现')
-				Sub_Spectrum_freq.append(Sub_Spectrum1) #频率
-				Sub_Spectrum_trace.append(Sub_Spectrum2) #信号强度
-				is_band=0
-				
-			'''
-			
 			#################信号段颜色设置，0-非法，红色，1-合法，绿色
 			color_list=['r','g']
 			
@@ -290,57 +238,31 @@ class WorkerThread(threading.Thread):     #画实时监测信号动态图
 				panelOne1.list_ctrl.InsertItem(i+signal_count,str(i+1))
 				panelOne1.list_ctrl.SetItem(i+signal_count,1,str(Sub_cf[i]/1e6))
 				panelOne1.list_ctrl.SetItem(i+signal_count,2,str(Sub_band[i]/1e6))
-				panelOne1.list_ctrl.SetItem(i+signal_count,3,'0')   #业务类型暂时不知道
+				panelOne1.list_ctrl.SetItem(i+signal_count,3,str(Sub_type[i]))   #业务类型暂时不知道
 				#如果判定为不合格则标注为红色
 				if Sub_illegal[i]==0:
 					panelOne1.list_ctrl.SetItemBackgroundColour(i+signal_count, "red")
 			signal_count += len(Sub_cf)
 			
 			trace1.append(data1)
+			trace2.append(data1[3:])
 			
-			if time.time()-load_time>600 and not work_state:
+			if time.time()-load_time>60 and not work_state:
+				trace2 = array(trace2)
 				time_now=str(datetime.datetime.now().strftime('%F %H:%M:%S')) # 总表的起始时间
 				print (1)
 				method.rmbt_facility_freqband_emenv(str_time,self.span,load_time_pre,time_now,longitude_set,latitude_set)
 				print (2)
 				method.rmbt_facility_freq_emenv3(str_time,load_time_pre,time_now,'01') #ssid默认为ssid
 				print (3)
-				method.rmbt_freq_occupancy(self.span,load_time_pre,time_now,self.start_freq,self.end_freq,longitude_set,latitude_set,height_set,trace1,average)
+				method.rmbt_freq_occupancy(self.span,load_time_pre,time_now,self.start_freq,self.end_freq,longitude_set,latitude_set,height_set,trace2,head[3:],average)
 				#pass;    ##一个小时存一次
 				load_time=time.time()
 				load_time_pre = time_now
-				trace1=DataFrame({})
+				trace2=[]
 				
 				
 		is_band=0
-		#子频段扫描信号显示
-		###保存整次扫描的信息
-		'''
-		self.window.Sub_Spectrum=Sub_Spectrum_freq #频率
-		self.window.Sub_Spectrum2=Sub_Spectrum_trace #幅度
-		self.window.Sub_cf_all=Sub_cf_all
-		self.window.Sub_band_all=Sub_band_all
-		self.window.Sub_peak_all=Sub_peak_all
-		
-		
-		#子信号扫描不显示了
-		n=len(self.window.Sub_Spectrum)
-		print (u'有几段不同信号:',n)
-		if n==0:
-			m_choice7Choices1=[u'全频段扫描']
-		else:
-			m_choice7Choices1 = [u'全频段扫描']+[u'第'+str(x+1)+u'段信号' for x in range(n)]
-			panelOne1.m_choice7.SetItems(m_choice7Choices1)
-			panelOne1.m_choice7.SetSelection( 0 )
-			#FigureCanvas(panelOne1.m_panel16, -1, self.window.Sub_Spectrum[0])
-			# print (self.window.Sub_Spectrum[0])
-			# print (self.window.Sub_Spectrum2[0])
-			panelOne1.l_user1.set_data(self.window.Sub_Spectrum[0],self.window.Sub_Spectrum2[0])
-			panelOne1.axes_score1.set_xlim(self.window.Sub_Spectrum[0][0],self.window.Sub_Spectrum[0][-1])
-			panelOne1.axes_score1.draw_artist(panelOne1.l_user1)
-			panelOne1.figurepanel1.draw()
-		'''
-			
 		# 获取测试时间,保存原始频谱数据
 		str_time1 = str(datetime.datetime.now().strftime('%F-%H-%M-%S'))  # 结束的准确时间，直接传到数据库中自动转化成datetime格式
 		file_path=os.getcwd()+"\\data1\\%s\\"%(str_time+'--'+str_time1 + ("spectrum%d" % t))
@@ -557,13 +479,13 @@ class WorkerThread3(threading.Thread):     #画导入信号动态图
 				if panel==1:
 					self.window.panelOne_one.traceData=self.y_data[num,:]
 					self.window.panelOne_one.axes_score.set_xlim(self.start_freq,self.end_freq)
-					self.window.panelOne_one.l_user.set_data(self.x_data[num,:],self.y_data[num,:])
+					self.window.panelOne_one.l_user.set_data(self.x_data,self.y_data[num,:])
 					self.window.panelOne_one.axes_score.draw_artist(self.window.panelOne_one.l_user)
 					self.window.panelOne_one.canvas.draw()
 				else:
 					self.window.panelOne_two.traceData=self.y_data[num,:]
 					self.window.panelOne_two.axes_score.set_xlim(self.start_freq,self.end_freq)
-					self.window.panelOne_two.l_user.set_data(self.x_data[num,:],self.y_data[num,:])
+					self.window.panelOne_two.l_user.set_data(self.x_data,self.y_data[num,:])
 					self.window.panelOne_two.axes_score.draw_artist(self.window.panelOne_two.l_user)
 					self.window.panelOne_two.canvas.draw()
 				self.timeToQuit.wait((self.continue_time/m))
@@ -635,10 +557,6 @@ class MyPanel1 ( wx.Panel ):
 		self.m_staticline6 = wx.StaticLine( self, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.LI_HORIZONTAL )
 		bSizer5.Add( self.m_staticline6, 0, wx.EXPAND |wx.ALL, 0 )
 		
-		
-		###################
-		
-		
 		##########################
 		self.panelOne_one = MyPanel1_1(self)
 		self.panelOne_two = MyPanel1_2(self)
@@ -661,50 +579,6 @@ class MyPanel1 ( wx.Panel ):
 		bSizer6 = wx.BoxSizer( wx.VERTICAL )
 		
 		self.bSizer19 = wx.BoxSizer( wx.VERTICAL )
-		
-		
-		'''
-		#显示出现子信号段的每帧信号
-		# self.m_choicebook2 = wx.Choicebook( self, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.CHB_DEFAULT )
-		# bSizer19.Add( self.m_choicebook2, 1, wx.EXPAND |wx.ALL, 5 )
-		
-		n=len(self.panelOne_one.Sub_Spectrum)
-		if n==0:
-			self.m_choice7Choices=[u'总频段扫描']
-		else:
-			self.m_choice7Choices = [u'总频段扫描']+[u'第'+str(x+1)+u'段信号' for x in range(n)]
-			
-		self.m_choice7 = wx.Choice( self, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, self.m_choice7Choices, 0 )
-		self.m_choice7.SetSelection( 0 )
-		self.m_choice7.Bind(wx.EVT_CHOICE, self.OnChoice7)
-		bSizer19.Add( self.m_choice7, 0, wx.ALL|wx.EXPAND, 5 )
-		
-		self.m_panel16 = wx.Panel( self, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
-		bSizer19.Add( self.m_panel16, 1, wx.EXPAND , 5 )
-		
-		#面板上画坐标轴
-		self.m_panel16_x,self.m_panel16_y=self.m_panel16.GetSize()
-		print (self.m_panel16_x)
-		print(self.m_panel16.GetClientSize())
-		
-		
-		#self.figure_score1,self.axes_score1,self.l_user1=method.draw_picture([],[],'Sub-Spectrum',"Frequency/Hz","Amplitude/dBmV",2.5,3)
-		self.figure_score1 = Figure((3.3,2.5),100)
-		self.figurepanel1=FigureCanvas(self.m_panel16, -1, self.figure_score1)
-		self.axes_score1 = self.figure_score1.add_subplot(111,facecolor='k')
-		self.l_user1,=self.axes_score1.plot([], [], 'y')
-		#self.axes_score.axhline(y=average, color='r')
-		self.axes_score1.set_ylim(-50,20)
-		self.axes_score1.set_title('Sub-Spectrum')
-		self.axes_score1.grid(True,color='w')
-		self.axes_score1.set_xlabel('Frequency/Hz')
-		self.axes_score1.set_ylabel('Amplitude/dBmVV')
-		self.figurepanel1.draw()
-		
-		
-		#self.figurepanel1.SetSize(self.m_panel16_x*15,self.m_panel16_y*13.8)
-		#select=self.m_choice7.GetSelection() #初始时没有信号时，返回-1
-		'''
 		
 		##############################################显示子信号列表
 		self.bx1=wx.StaticBox( self, wx.ID_ANY, u"监测信号信息表：" )
@@ -730,45 +604,6 @@ class MyPanel1 ( wx.Panel ):
 		bSizer6.Add( self.m_staticline9, 0, wx.EXPAND|wx.ALL, 0 )
 		
 		self.bSizer20 = wx.BoxSizer( wx.VERTICAL )
-		
-		'''
-		#########################################即时显示带宽信息
-		self.bx1=wx.StaticBox( self, wx.ID_ANY, u"带宽信号信息" )
-		#bx1.SetBackgroundColour("MEDIUM GOLDENROD")
-		self.bx1.SetForegroundColour("SLATE BLUE")
-		font = wx.Font(9, wx.DECORATIVE,wx.NORMAL,wx.BOLD)
-		self.bx1.SetFont(font)
-		self.sbSizer2 = wx.StaticBoxSizer( self.bx1, wx.VERTICAL )
-		self.bSizer21=wx.BoxSizer(wx.VERTICAL)
-		
-		self.bSizer22=wx.BoxSizer(wx.HORIZONTAL)
-		self.m_staticText9 = wx.StaticText( self, wx.ID_ANY, u"中心频点：", wx.DefaultPosition, wx.DefaultSize, 0 )
-		self.m_staticText9.Wrap( -1 )
-		self.bSizer22.Add( self.m_staticText9, 0, wx.ALL, 5 )
-		self.m_textCtrl1 = wx.TextCtrl( self, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize, 0 )
-		self.bSizer22.Add( self.m_textCtrl1, 0, wx.ALL, 5 )
-		self.bSizer21.Add(self.bSizer22,1,wx.EXPAND,5)
-		
-		self.bSizer23=wx.BoxSizer(wx.HORIZONTAL)
-		self.m_staticText10 = wx.StaticText( self, wx.ID_ANY, u"带宽：    ", wx.DefaultPosition, wx.DefaultSize, 0 )
-		self.m_staticText10.Wrap( -1 )
-		self.bSizer23.Add( self.m_staticText10, 0, wx.ALL, 5 )
-		self.m_textCtrl2 = wx.TextCtrl( self, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize, 0 )
-		self.bSizer23.Add( self.m_textCtrl2, 0, wx.ALL, 5 )
-		self.bSizer21.Add(self.bSizer23,1,wx.EXPAND,5)
-		
-		self.bSizer24=wx.BoxSizer(wx.HORIZONTAL)
-		self.m_staticText11 = wx.StaticText( self, wx.ID_ANY, u"峰值：    ", wx.DefaultPosition, wx.DefaultSize, 0 )
-		self.m_staticText11.Wrap( -1 )
-		self.bSizer24.Add( self.m_staticText11, 0, wx.ALL, 5 )
-		self.m_textCtrl3 = wx.TextCtrl( self, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize, 0 )
-		self.bSizer24.Add( self.m_textCtrl3, 0, wx.ALL, 5 )
-		self.bSizer21.Add(self.bSizer24,1,wx.EXPAND,5)
-		
-		
-		self.sbSizer2.Add(self.bSizer21,1,wx.EXPAND,5)
-		self.bSizer20.Add( self.sbSizer2, 2, wx.ALL|wx.EXPAND, 8 )
-		'''
 		
 		
 		###############################################导入数据显示
@@ -989,7 +824,6 @@ class Wait_GPS (wx.Dialog):
 		self.location=[-1,-1,-1]
 		
 	def OnStart(self):
-
 		########################用多线程
 		t4=WorkerThread4(self,self.count,self.gause_range)
 		self.threads4.append(t4)
@@ -998,25 +832,7 @@ class Wait_GPS (wx.Dialog):
 		tn=threading.Thread(target=self.get_GPS2,args=(rsa_true,))
 		tn.start()
 		print ('Start getting GPS data')
-		#a.location=method.get_GPS2(rsa_true)
-		# while sum(array(self.location)==-1)!=0:
-			# self.location=method.get_GPS2(rsa_true)
-		########################不用多线程
-		# while (self.GPS_wait):
-			# if self.count < self.gause_range:
-				# self.count=self.count+1
-				# longitude,latitude,height=method.get_GPS()
-				# print (longitude,latitude,height)
-				# if sum(array([longitude,latitude,height])==-1)==0:
-					# self.count=self.gause_range
-					# self.button1.Enable(True)
-					# self.button2.Enable(False)
-					# self.GPS_state=True
-					# self.GPS_wait=False
-				# self.gauge.SetValue(count)
-			# else:
-				# self.GPS_wait=False
-		
+
 	def OnStop(self,event):
 		########################用多线程
 		global GPS_end
@@ -1375,184 +1191,7 @@ class MyPanel1_1 ( wx.Panel ):
 		
 		self.panel2.SetSizer(bSizer44)
 		#############################################################################设置模式1参数END
-		
-		'''
-		#############################################################################设置模式2参数START
-		self.panel3 = wx.Panel( self.notebook, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
-		
-		bSizer45=wx.BoxSizer( wx.HORIZONTAL )
-		
-		bx2=wx.StaticBox( self.panel3, wx.ID_ANY, u"参数设置" )
-		#bx1.SetBackgroundColour("MEDIUM GOLDENROD")
-		bx2.SetForegroundColour("SLATE BLUE")
-		font = wx.Font(10, wx.DECORATIVE,wx.NORMAL,wx.BOLD)
-		bx2.SetFont(font)
-		sbSizer2 = wx.StaticBoxSizer(bx2, wx.VERTICAL )
-		
-		two_bSizer10 = wx.BoxSizer( wx.HORIZONTAL )
-		
-		two_bSizer11 = wx.BoxSizer( wx.VERTICAL )
-		
-		two_bSizer13 = wx.BoxSizer( wx.HORIZONTAL )
-		
-		self.staticText3 = wx.StaticText( self.panel3, wx.ID_ANY, u"选择频率段：", wx.DefaultPosition, wx.DefaultSize, 0 )
-		#self.staticText3.Wrap( -1 )
-		#self.staticText3.SetFont( wx.Font( 12, 70, 90, wx.BOLD, False, "宋体" ) )
-		two_bSizer13.Add( self.staticText3, 0, wx.ALL|wx.ALIGN_CENTRE, 5 )
-		
-		
-		# self.textCtrl1 = wx.TextCtrl( self.panel3, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, (80,20), 0 )
-		# two_bSizer13.Add( self.textCtrl1, 0, wx.ALL|wx.ALIGN_CENTRE, 0 )
-		
-		servicedid,freqname,freqrange_list=method.read_service()
-		print ('freqrange_list:',freqrange_list)
-		choice1Choices = freqrange_list
-		self.choice1 = wx.Choice( self.panel3, wx.ID_ANY, wx.DefaultPosition, (145,20), choice1Choices, 0 )
-		self.choice1.SetSelection( 0 )
-		two_bSizer13.Add( self.choice1, 0, wx.ALL|wx.ALIGN_CENTRE, 2 )
-		
-		# self.m_choices = ['110-220','220-330']
-		# self.choice_Num=len(self.m_choices)
-		# self.m_combo1 = wx.ComboBox( self, wx.ID_ANY, u'请选择文件...',wx.DefaultPosition, (100,20), self.m_choices, 0 )
-		# #self.m_combo1.Bind(wx.EVT_COMBOBOX, self.OnCombo2)
-		# two_bSizer13.Add(self.m_combo1,0,wx.ALL|wx.EXPAND,10)
-		
-		
-		
-		two_bSizer11.Add( two_bSizer13, 1, wx.EXPAND, 0 )
-		
-		two_bSizer14 = wx.BoxSizer( wx.HORIZONTAL )
-		
-		self.staticText4 = wx.StaticText( self.panel3, wx.ID_ANY, u"频率步进：", wx.DefaultPosition, wx.DefaultSize, 0 )
-		self.staticText4.Wrap( -1 )
-		two_bSizer14.Add( self.staticText4, 0, wx.ALIGN_CENTER|wx.ALL, 5 )
-		
-		self.textCtrl2 = wx.TextCtrl( self.panel3, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, (90,20), 0 )
-		two_bSizer14.Add( self.textCtrl2, 0, wx.ALIGN_CENTER|wx.ALL, 0 )
-		
-		choice2Choices = ['MHz','GHz','KHz']
-		self.choice2 = wx.Choice( self.panel3, wx.ID_ANY, wx.DefaultPosition, (60,20), choice2Choices, 0 )
-		self.choice2.SetSelection( 0 )
-		two_bSizer14.Add( self.choice2, 0, wx.ALIGN_CENTER|wx.ALL, 2 )
-		
-		
-		two_bSizer11.Add( two_bSizer14, 1, wx.EXPAND, 0 )
-		
-		two_bSizer15 = wx.BoxSizer( wx.HORIZONTAL )
-		
-		self.staticText5 = wx.StaticText( self.panel3, wx.ID_ANY, u"  RBW    :  ", wx.DefaultPosition, wx.DefaultSize, 0 )
-		self.staticText5.Wrap( -1 )
-		self.staticText5.SetFont( wx.Font( 9, 70, 90, 92, False, "@华文楷体" ) ) #@表示文字竖着写
-		
-		two_bSizer15.Add( self.staticText5, 0, wx.ALIGN_CENTER|wx.ALL, 5 )
-		
-		self.textCtrl3 = wx.TextCtrl( self.panel3, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, (90,20), 0 )
-		two_bSizer15.Add( self.textCtrl3, 0, wx.ALIGN_CENTER|wx.ALL, 0 )
-		
-		choice3Choices = ['KHz','GHz','MHz']
-		self.choice3 = wx.Choice( self.panel3, wx.ID_ANY, wx.DefaultPosition, (60,20), choice3Choices, 0 )
-		self.choice3.SetSelection( 0 )
-		two_bSizer15.Add( self.choice3, 0, wx.ALIGN_CENTER|wx.ALL, 2 )
-		
-		
-		two_bSizer11.Add( two_bSizer15, 1, wx.EXPAND, 0 )
-		
-		
-		two_bSizer10.Add( two_bSizer11, 3, wx.EXPAND, 0 )
-		
 
-		
-		two_bSizer27 = wx.BoxSizer( wx.VERTICAL )
-		
-		two_bSizer28 = wx.BoxSizer( wx.HORIZONTAL )
-		
-		self.staticText9 = wx.StaticText( self.panel3, wx.ID_ANY, u" ", wx.DefaultPosition, (90,20), 0 )
-		self.staticText9.Wrap( -1 )
-		two_bSizer28.Add( self.staticText9, 0, wx.ALIGN_CENTER|wx.ALL, 0 )
-		
-		# choice5Choices = ['max_hold','min_hold','average_hold']
-		# self.choice5 = wx.Choice( self, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, choice5Choices, 0 )
-		# self.choice5.SetSelection( 0 )
-		# two_bSizer28.Add( self.choice5, 0, wx.ALIGN_CENTER|wx.ALL, 0 )
-		
-		
-		two_bSizer27.Add( two_bSizer28, 1, wx.EXPAND, 5 )
-		
-		two_bSizer29 = wx.BoxSizer( wx.HORIZONTAL )
-		
-		self.staticText10 = wx.StaticText( self.panel3, wx.ID_ANY, u" 检测时长： ", wx.DefaultPosition, wx.DefaultSize, 0 )
-		self.staticText10.Wrap( -1 )
-		two_bSizer29.Add( self.staticText10, 0, wx.ALIGN_CENTER|wx.ALL, 0 )
-		
-		self.textCtrl5 = wx.TextCtrl( self.panel3, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, (90,20), 0 )
-		two_bSizer29.Add( self.textCtrl5, 0, wx.ALIGN_CENTER|wx.ALL, 0 )
-		
-		self.staticText11 = wx.StaticText( self.panel3, wx.ID_ANY, u"小时", wx.DefaultPosition, wx.DefaultSize, 0 )
-		self.staticText11.Wrap( -1 )
-		two_bSizer29.Add( self.staticText11, 0, wx.ALIGN_CENTER|wx.ALL, 2 )
-		
-		
-		two_bSizer27.Add( two_bSizer29, 1, wx.EXPAND, 0 )
-		
-		two_bSizer30 = wx.BoxSizer( wx.VERTICAL )
-		
-		# self.button10 = wx.ToggleButton( self, wx.ID_ANY, u"开始监测", wx.DefaultPosition, (200,50), 0 )
-		# two_bSizer30.Add( self.button10, 0, wx.ALIGN_CENTER|wx.ALL|wx.EXPAND|wx.BOTTOM, 2 )
-		# self.button10.Bind(wx.EVT_TOGGLEBUTTON,self.OnToggle) 
-		
-		two_bSizer30 = wx.BoxSizer( wx.HORIZONTAL )
-		
-		self.staticText17 = wx.StaticText( self.panel3, wx.ID_ANY, u"  VBW   :  ", wx.DefaultPosition, wx.DefaultSize, 0 )
-		self.staticText17.Wrap( -1 )
-		two_bSizer30.Add( self.staticText17, 0, wx.ALIGN_CENTER|wx.ALL, 0 )
-		
-		self.textCtrl10 = wx.TextCtrl( self.panel3, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, (90,20), 0 )
-		two_bSizer30.Add( self.textCtrl10, 0, wx.ALIGN_CENTER|wx.ALL, 0 )
-		
-		choice2Choices = ['KHz','GHz','MHz']
-		self.choice8 = wx.Choice( self.panel3, wx.ID_ANY, wx.DefaultPosition, (60,20), choice2Choices, 0 )
-		self.choice8.SetSelection( 0 )
-		two_bSizer30.Add( self.choice8, 0, wx.ALIGN_CENTER|wx.ALL, 2 )
-		
-		
-		two_bSizer27.Add( two_bSizer30, 1, wx.EXPAND, 0 )
-		
-		
-		two_bSizer10.Add( two_bSizer27, 3, wx.EXPAND, 0 )
-		
-		sbSizer2.Add( two_bSizer10, 1, wx.EXPAND, 5 )
-		
-		bSizer45.Add(sbSizer2, 3, wx.EXPAND, 0)
-		
-		two_bSizer26 = wx.BoxSizer( wx.VERTICAL )
-		# self.panel5 = wx.Panel( self, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
-		# two_bSizer26.Add( self.panel5, 1, wx.EXPAND |wx.ALL, 0 )
-		
-		
-		self.button10 = wx.Button( self.panel3, wx.ID_ANY, u"开始监测", wx.DefaultPosition, wx.DefaultSize, 0 )
-		self.button10.Bind(wx.EVT_PAINT, self.highlight_button)
-		two_bSizer26.Add( self.button10, 1, wx.ALIGN_CENTER|wx.ALL|wx.EXPAND|wx.BOTTOM, 2 )
-		self.button10.Bind(wx.EVT_BUTTON,self.Start_Detect) 
-		self.button10.SetFont( wx.Font( 12, 70, 90, wx.BOLD, False, "华文楷体" ) )
-		
-		self.button11 = wx.Button( self.panel3, wx.ID_ANY, u"停止监测", wx.DefaultPosition, wx.DefaultSize, 0 )
-		two_bSizer26.Add( self.button11, 1, wx.ALIGN_CENTER|wx.ALL|wx.EXPAND|wx.BOTTOM, 2 )
-		self.button11.Bind(wx.EVT_BUTTON,self.Stop_Detect) 
-		self.button11.SetFont( wx.Font( 12, 70, 90, wx.BOLD, False, "华文楷体" ) )
-		
-		bSizer45.Add( two_bSizer26, 3, wx.EXPAND, 0)
-		
-		self.panel3.SetSizer(bSizer45)
-		
-		
-		
-		
-		#############################################################################设置模式2参数END
-		'''
-		
-		
-		
-		
 		################################新加
 		# read start_freq
 		start_freq=self.m_textCtrl1.GetValue()
@@ -1800,75 +1439,6 @@ class MyPanel1_1 ( wx.Panel ):
 							t=t*3600
 							self.m_textCtrl5.SetValue(str(float(t/3600)))
 							continue_time=t
-							'''
-							###################################################月报监测
-							if self.notebook.GetSelection()==0:
-								freq_select_string=self.choice1.GetString(self.choice1.GetSelection())
-								freq_select=[float(freq) for freq in freq_select_string.split()[0].split('-')]
-								start_freq=freq_select[0]*1e6
-								end_freq=freq_select[1]*1e6
-								span=end_freq-start_freq
-								print ('mode yuebao:',start_freq,end_freq,span)
-								
-								#Set center_freq and span
-								self.m_textCtrl11.SetValue(str((start_freq+end_freq)/(2e6))+'MHz')
-								self.m_textCtrl12.SetValue(str(span/(1e6))+'MHz')
-								#Set step_size=span/801
-								step_size=span/801
-								self.choice2_string=self.choice2.GetString(self.choice2.GetSelection())
-								if self.choice2_string=='GHz':
-									step_size=step_size/(10**9)
-								elif self.choice2_string=='KHz':
-									step_size=step_size/(10**3)
-								else:
-									step_size=step_size/(10**6)
-								self.textCtrl2.SetValue(str(step_size))
-								#read Antenna_number
-								anteid=config_data['Antenna_number']
-								
-								#read rbw
-								rbw=self.textCtrl3.GetValue()
-								self.choice3_string=self.choice3.GetString(self.choice3.GetSelection())
-								if rbw.strip()=='':
-									rbw=config_data['RBW']
-									if self.choice3_string=='GHz':
-										self.textCtrl3.SetValue(str(rbw/(10**6)))
-									elif self.choice3_string=='MHz':
-										self.textCtrl3.SetValue(str(rbw/(10**3)))
-									else:
-										self.textCtrl3.SetValue(str(rbw))
-								else:
-									try:
-										rbw=float(rbw)
-										if self.choice3_string=='GHz':
-											rbw=rbw*(10**6)
-										if self.choice3_string=='MHz':
-											rbw=rbw*(10**3)
-									except (ValueError,TypeError) as e:
-										rbw=config_data['RBW']
-										wx.MessageBox(u' RBW输入须为数值', "Message" ,wx.OK | wx.ICON_INFORMATION)
-								rbw=rbw*1e3
-								
-								#read vbw
-								vbw=config_data['VBW']
-								self.textCtrl10.SetValue(str(vbw))
-								vbw=vbw*1e3
-								
-								#read time
-								t=self.textCtrl5.GetValue()
-								if t.strip()=='':
-									t=0.001
-								else:
-									try:
-										t=float(t)
-									except (ValueError,TypeError) as e:
-										t=0.002
-										wx.MessageBox(u' 终止频率输入须为数值', "Message" ,wx.OK | wx.ICON_INFORMATION)
-								t=t*3600
-								self.textCtrl5.SetValue(str(float(t/3600)))
-								continue_time=t
-							'''
-							
 							#q=Queue()
 							self.count+=1
 							detection_state=1
@@ -1975,170 +1545,6 @@ class MyPanel1_2 ( wx.Panel ):
 		###########################################################################加入notebook start
 		self.panel = wx.Panel(self)
 		self.notebook = wx.Notebook(self.panel)
-		
-		'''
-		##########################################################################添加noteook第一个面板 自定义模板
-		self.panel2 = wx.Panel( self.notebook, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
-		##################################################################################设置参数
-		bSizer44 = wx.BoxSizer( wx.HORIZONTAL )
-		
-		bx1=wx.StaticBox( self.panel2, wx.ID_ANY, u"参数设置" )
-		#bx1.SetBackgroundColour("MEDIUM GOLDENROD")
-		bx1.SetForegroundColour("SLATE BLUE")
-		font = wx.Font(10, wx.DECORATIVE,wx.NORMAL,wx.BOLD)
-		bx1.SetFont(font)
-		sbSizer1 = wx.StaticBoxSizer(bx1, wx.VERTICAL )
-		
-		bSizer10 = wx.BoxSizer( wx.HORIZONTAL )
-		
-		bSizer11 = wx.BoxSizer( wx.VERTICAL )
-		
-		bSizer13 = wx.BoxSizer( wx.HORIZONTAL )
-		
-		self.m_staticText3 = wx.StaticText( self.panel2, wx.ID_ANY, u"起始频率：", wx.DefaultPosition, wx.DefaultSize, 0 )
-		#self.m_staticText3.Wrap( -1 )
-		#self.m_staticText3.SetFont( wx.Font( 12, 70, 90, wx.BOLD, False, "宋体" ) )
-		bSizer13.Add( self.m_staticText3, 0, wx.ALL|wx.ALIGN_CENTRE, 5 )
-		
-		
-		self.m_textCtrl1 = wx.TextCtrl( self.panel2, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, (80,20), 0 )
-		bSizer13.Add( self.m_textCtrl1, 0, wx.ALL|wx.ALIGN_CENTRE, 0 )
-		
-		m_choice1Choices = ['MHz','GHz','KHz']
-		self.m_choice1 = wx.Choice( self.panel2, wx.ID_ANY, wx.DefaultPosition, (50,20), m_choice1Choices, 0 )
-		self.m_choice1.SetSelection( 0 )
-		bSizer13.Add( self.m_choice1, 0, wx.ALL|wx.ALIGN_CENTRE, 2 )
-		
-		
-		bSizer11.Add( bSizer13, 1, wx.EXPAND, 0 )
-		
-		bSizer14 = wx.BoxSizer( wx.HORIZONTAL )
-		
-		self.m_staticText4 = wx.StaticText( self.panel2, wx.ID_ANY, u"终止频率：", wx.DefaultPosition, wx.DefaultSize, 0 )
-		self.m_staticText4.Wrap( -1 )
-		bSizer14.Add( self.m_staticText4, 0, wx.ALIGN_CENTER|wx.ALL, 5 )
-		
-		self.m_textCtrl2 = wx.TextCtrl( self.panel2, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, (80,20), 0 )
-		bSizer14.Add( self.m_textCtrl2, 0, wx.ALIGN_CENTER|wx.ALL, 0 )
-		
-		m_choice2Choices = ['MHz','GHz','KHz']
-		self.m_choice2 = wx.Choice( self.panel2, wx.ID_ANY, wx.DefaultPosition, (50,20), m_choice2Choices, 0 )
-		self.m_choice2.SetSelection( 0 )
-		bSizer14.Add( self.m_choice2, 0, wx.ALIGN_CENTER|wx.ALL, 2 )
-		
-		
-		bSizer11.Add( bSizer14, 1, wx.EXPAND, 0 )
-		
-		bSizer15 = wx.BoxSizer( wx.HORIZONTAL )
-		
-		self.m_staticText5 = wx.StaticText( self.panel2, wx.ID_ANY, u"  RBW    :  ", wx.DefaultPosition, wx.DefaultSize, 0 )
-		self.m_staticText5.Wrap( -1 )
-		self.m_staticText5.SetFont( wx.Font( 9, 70, 90, 92, False, "@华文楷体" ) ) #@表示文字竖着写
-		
-		bSizer15.Add( self.m_staticText5, 0, wx.ALIGN_CENTER|wx.ALL, 5 )
-		
-		self.m_textCtrl3 = wx.TextCtrl( self.panel2, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, (80,20), 0 )
-		bSizer15.Add( self.m_textCtrl3, 0, wx.ALIGN_CENTER|wx.ALL, 0 )
-		
-		m_choice3Choices = ['KHz','GHz','MHz']
-		self.m_choice3 = wx.Choice( self.panel2, wx.ID_ANY, wx.DefaultPosition, (50,20), m_choice3Choices, 0 )
-		self.m_choice3.SetSelection( 0 )
-		bSizer15.Add( self.m_choice3, 0, wx.ALIGN_CENTER|wx.ALL, 2 )
-		
-		
-		bSizer11.Add( bSizer15, 1, wx.EXPAND, 0 )
-		
-		
-		bSizer10.Add( bSizer11, 3, wx.EXPAND, 0 )
-		
-
-		
-		bSizer27 = wx.BoxSizer( wx.VERTICAL )
-		
-		bSizer28 = wx.BoxSizer( wx.HORIZONTAL )
-		
-		self.m_staticText9 = wx.StaticText( self.panel2, wx.ID_ANY, u" ", wx.DefaultPosition, (80,20), 0 )
-		self.m_staticText9.Wrap( -1 )
-		bSizer28.Add( self.m_staticText9, 0, wx.ALIGN_CENTER|wx.ALL, 0 )
-		
-		# m_choice5Choices = ['max_hold','min_hold','average_hold']
-		# self.m_choice5 = wx.Choice( self, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, m_choice5Choices, 0 )
-		# self.m_choice5.SetSelection( 0 )
-		# bSizer28.Add( self.m_choice5, 0, wx.ALIGN_CENTER|wx.ALL, 0 )
-		
-		
-		bSizer27.Add( bSizer28, 1, wx.EXPAND, 5 )
-		
-		bSizer29 = wx.BoxSizer( wx.HORIZONTAL )
-		
-		self.m_staticText10 = wx.StaticText( self.panel2, wx.ID_ANY, u" 检测时长： ", wx.DefaultPosition, wx.DefaultSize, 0 )
-		self.m_staticText10.Wrap( -1 )
-		bSizer29.Add( self.m_staticText10, 0, wx.ALIGN_CENTER|wx.ALL, 0 )
-		
-		self.m_textCtrl5 = wx.TextCtrl( self.panel2, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, (80,20), 0 )
-		bSizer29.Add( self.m_textCtrl5, 0, wx.ALIGN_CENTER|wx.ALL, 0 )
-		
-		self.m_staticText11 = wx.StaticText( self.panel2, wx.ID_ANY, u"小时", wx.DefaultPosition, wx.DefaultSize, 0 )
-		self.m_staticText11.Wrap( -1 )
-		bSizer29.Add( self.m_staticText11, 0, wx.ALIGN_CENTER|wx.ALL, 2 )
-		
-		
-		bSizer27.Add( bSizer29, 1, wx.EXPAND, 0 )
-		
-		bSizer30 = wx.BoxSizer( wx.VERTICAL )
-		
-		# self.m_button10 = wx.ToggleButton( self, wx.ID_ANY, u"开始监测", wx.DefaultPosition, (200,50), 0 )
-		# bSizer30.Add( self.m_button10, 0, wx.ALIGN_CENTER|wx.ALL|wx.EXPAND|wx.BOTTOM, 2 )
-		# self.m_button10.Bind(wx.EVT_TOGGLEBUTTON,self.OnToggle) 
-		
-		bSizer30 = wx.BoxSizer( wx.HORIZONTAL )
-		
-		self.m_staticText17 = wx.StaticText( self.panel2, wx.ID_ANY, u" 频率步进： ", wx.DefaultPosition, wx.DefaultSize, 0 )
-		self.m_staticText17.Wrap( -1 )
-		bSizer30.Add( self.m_staticText17, 0, wx.ALIGN_CENTER|wx.ALL, 0 )
-		
-		self.m_textCtrl10 = wx.TextCtrl( self.panel2, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, (80,20), 0 )
-		bSizer30.Add( self.m_textCtrl10, 0, wx.ALIGN_CENTER|wx.ALL, 0 )
-		
-		m_choice2Choices = ['MHz','GHz','KHz']
-		self.m_choice8 = wx.Choice( self.panel2, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, m_choice2Choices, 0 )
-		self.m_choice8.SetSelection( 0 )
-		bSizer30.Add( self.m_choice8, 0, wx.ALIGN_CENTER|wx.ALL, 2 )
-		
-		
-		bSizer27.Add( bSizer30, 1, wx.EXPAND, 0 )
-		
-		
-		bSizer10.Add( bSizer27, 3, wx.EXPAND, 0 )
-		
-		
-		sbSizer1.Add( bSizer10, 1, wx.EXPAND, 5 )
-		
-		bSizer44.Add(sbSizer1, 3 ,wx.EXPAND, 0)
-		
-		bSizer26 = wx.BoxSizer( wx.VERTICAL )
-		# self.m_panel5 = wx.Panel( self, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
-		# bSizer26.Add( self.m_panel5, 1, wx.EXPAND |wx.ALL, 0 )
-		
-		
-		self.m_button10 = wx.Button( self.panel2, wx.ID_ANY, u"开始监测", wx.DefaultPosition, wx.DefaultSize, 0 )
-		self.m_button10.Bind(wx.EVT_PAINT, self.highlight_button)
-		bSizer26.Add( self.m_button10, 1, wx.ALIGN_CENTER|wx.ALL|wx.EXPAND|wx.BOTTOM, 2 )
-		self.m_button10.Bind(wx.EVT_BUTTON,self.Start_Detect) 
-		self.m_button10.SetFont( wx.Font( 12, 70, 90, wx.BOLD, False, "华文楷体" ) )
-		
-		self.m_button11 = wx.Button( self.panel2, wx.ID_ANY, u"停止监测", wx.DefaultPosition, wx.DefaultSize, 0 )
-		bSizer26.Add( self.m_button11, 1, wx.ALIGN_CENTER|wx.ALL|wx.EXPAND|wx.BOTTOM, 2 )
-		self.m_button11.Bind(wx.EVT_BUTTON,self.Stop_Detect) 
-		self.m_button11.SetFont( wx.Font( 12, 70, 90, wx.BOLD, False, "华文楷体" ) )
-		
-		bSizer44.Add( bSizer26, 1, wx.EXPAND, 0)
-		
-		
-		
-		self.panel2.SetSizer(bSizer44)
-		#############################################################################设置模式1参数END
-		'''
 		
 		#############################################################################设置模式2参数START
 		self.panel3 = wx.Panel( self.notebook, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
@@ -2312,10 +1718,6 @@ class MyPanel1_2 ( wx.Panel ):
 		
 		#############################################################################设置模式2参数END
 		
-		
-		
-		
-		
 		################################新加
 		# read start_freq
 		start_freq=config_data['start_freq']
@@ -2421,124 +1823,7 @@ class MyPanel1_2 ( wx.Panel ):
 							# panelOne1.m_textCtrl5.SetValue(str(a.location[1])[0:6])
 							# panelOne1.m_textCtrl6.SetValue(str(a.location[2])[0:6]+' m')
 
-							#event.GetEventObject().SetLabel(u"停止检测")
 							
-							##########################################################自定义监测
-							'''
-							# read start_freq
-							start_freq=self.m_textCtrl1.GetValue()
-							self.m_choice1_string=self.m_choice1.GetString(self.m_choice1.GetSelection())
-							if start_freq.strip()=='':
-								print (config_data)
-								start_freq=config_data['start_freq']
-								if self.m_choice1_string=='GHz':
-									self.m_textCtrl1.SetValue(str(start_freq/(10**3)))
-								elif self.m_choice1_string=='KHz':
-									self.m_textCtrl1.SetValue(str(start_freq*(10**3)))
-								else:
-									self.m_textCtrl1.SetValue(str(start_freq))
-							else:
-								try:
-									print ('start_freq:',start_freq)
-									start_freq=float(start_freq)
-									#print (self.m_choice1.GetString()=='GHz')  
-									if self.m_choice1_string=='GHz':
-										start_freq=start_freq*(10**3)
-										print ('start_freq_mid:',start_freq)
-									if self.m_choice1_string=='KHz':
-										start_freq=start_freq/(10**3)
-								except (ValueError,TypeError) as e:
-									start_freq=config_data['start_freq']
-									wx.MessageBox(u' 初始频率输入须为数值', "Message" ,wx.OK | wx.ICON_INFORMATION)
-							start_freq=start_freq*1e6
-							print ('start_freq(MHz):',start_freq)
-							#read end_freq
-							end_freq=self.m_textCtrl2.GetValue()
-							self.m_choice2_string=self.m_choice2.GetString(self.m_choice2.GetSelection())
-							if end_freq.strip()=='':
-								end_freq=config_data['end_freq']
-								if self.m_choice2_string=='GHz':
-									self.m_textCtrl2.SetValue(str(end_freq/(10**3)))
-								elif self.m_choice2_string=='KHz':
-									self.m_textCtrl2.SetValue(str(end_freq*(10**3)))
-								else:
-									self.m_textCtrl2.SetValue(str(end_freq))
-							else:
-								try:
-									end_freq=float(end_freq)
-									if self.m_choice2_string=='GHz':
-										end_freq=end_freq*(10**3)
-									if self.m_choice2_string=='KHz':
-										end_freq=end_freq/(10**3)
-								except (ValueError,TypeError) as e:
-									end_freq=config_data['end_freq']
-									wx.MessageBox(u' 终止频率输入须为数值', "Message" ,wx.OK | wx.ICON_INFORMATION)
-							end_freq=end_freq*1e6
-							span=end_freq-start_freq
-							print (start_freq)
-							print (end_freq)
-							print (span)
-							if span <=0:
-								#event.GetEventObject().SetValue(not state)
-								wx.MessageBox(u' 终止频率应大于起始频率', "Message" ,wx.OK | wx.ICON_INFORMATION)
-								return 
-							#Set center_freq and span
-							self.m_textCtrl11.SetValue(str((start_freq+end_freq)/(2e6))+'MHz')
-							self.m_textCtrl12.SetValue(str(span/(1e6))+'MHz')
-							#Set step_size=span/801
-							step_size=span/801
-							self.m_choice8_string=self.m_choice8.GetString(self.m_choice8.GetSelection())
-							if self.m_choice8_string=='GHz':
-								step_size=step_size/(10**9)
-							elif self.m_choice8_string=='KHz':
-								step_size=step_size/(10**3)
-							else:
-								step_size=step_size/(10**6)
-							self.m_textCtrl10.SetValue(str(step_size))
-							#read Antenna_number
-							anteid=config_data['Antenna_number']
-							
-							#read rbw
-							rbw=self.m_textCtrl3.GetValue()
-							self.m_choice3_string=self.m_choice3.GetString(self.m_choice3.GetSelection())
-							if rbw.strip()=='':
-								rbw=config_data['RBW']
-								if self.m_choice3_string=='GHz':
-									self.m_textCtrl3.SetValue(str(rbw/(10**6)))
-								elif self.m_choice3_string=='MHz':
-									self.m_textCtrl3.SetValue(str(rbw/(10**3)))
-								else:
-									self.m_textCtrl3.SetValue(str(rbw))
-							else:
-								try:
-									rbw=float(rbw)
-									if self.m_choice3_string=='GHz':
-										rbw=rbw*(10**6)
-									if self.m_choice3_string=='MHz':
-										rbw=rbw*(10**3)
-								except (ValueError,TypeError) as e:
-									rbw=config_data['RBW']
-									wx.MessageBox(u' 终止频率输入须为数值', "Message" ,wx.OK | wx.ICON_INFORMATION)
-							rbw=rbw*1e3
-							
-							#read vbw
-							vbw=config_data['VBW']
-							vbw=vbw*1e3
-							
-							#read time
-							t=self.m_textCtrl5.GetValue()
-							if t.strip()=='':
-								t=0.001
-							else:
-								try:
-									t=float(t)
-								except (ValueError,TypeError) as e:
-									t=0.002
-									wx.MessageBox(u' 终止频率输入须为数值', "Message" ,wx.OK | wx.ICON_INFORMATION)
-							t=t*3600
-							self.m_textCtrl5.SetValue(str(float(t/3600)))
-							continue_time=t
-							'''
 							###################################################月报监测
 							freq_select_string=self.choice1.GetString(self.choice1.GetSelection())
 							freq_select=[float(freq) for freq in freq_select_string.split()[0].split('-')]
@@ -3600,7 +2885,7 @@ class MyPanel3 ( wx.Panel ):
 		axes_score.bar(axis_x,occ1,step/2)
 		axes_score.plot(peak_index,peak,'ro')
 		txt=axes_score.text(peak_index-1,peak,'%s'%label,color='r')
-		print (occ1)
+		#print (occ1)
 		return figure_score,axes_score
 		
 	def spectrum_occ(self,start_time,stop_time,task_name,freq_start,freq_stop):
@@ -4675,7 +3960,7 @@ class MyPanel7( wx.Panel):
 		#self.m_bpButton1 = wx.BitmapButton( self.m_panel1, wx.ID_ANY, bmp1, (120,140),wx.DefaultSize, wx.BU_AUTODRAW )
 		#bSizer5.Add( self.m_bpButton1, 0, wx.ALL, 5 )
 		
-		self.m_bpButton2 = buttons.GenBitmapTextButton(self.m_panel1, -1, bmp, u"实时监测  ",(540,220),(300,100),style=wx.NO_BORDER)#位图文本按钮
+		self.m_bpButton2 = buttons.GenBitmapTextButton(self.m_panel1, -1, bmp, u"实时监测  ",(570,220),(300,100),style=wx.NO_BORDER)#位图文本按钮
 		self.m_bpButton2.SetUseFocusIndicator(False)
 		font = wx.Font(30, wx.DECORATIVE,wx.NORMAL,wx.BOLD)
 		self.m_bpButton2.SetFont(font)
@@ -5414,6 +4699,7 @@ class MyFrame1 ( wx.Frame ):
 			self.panelOne.Show()
 			self.panelOne.panelOne_one.Hide()
 			self.panelOne.panelOne_two.Show()
+			self.panelOne.list_ctrl.DeleteAllItems()   #清空之前信号列表的数据
 			# self.m_panel5.SetBackgroundColour("MEDIUM TURQUOISE")
 			# self.m_panel6.SetBackgroundColour(self.buttom_color)
 			# self.m_panel7.SetBackgroundColour(self.buttom_color)
@@ -5448,6 +4734,7 @@ class MyFrame1 ( wx.Frame ):
 			self.panelFive.Hide()
 			self.panelSix.Show()
 			self.panelSeven.Hide()
+			self.panelOne.list_ctrl.DeleteAllItems()   #清空之前信号列表的数据
 
 			# self.m_panel5.SetBackgroundColour("MEDIUM TURQUOISE")
 			# self.m_panel6.SetBackgroundColour(self.buttom_color)

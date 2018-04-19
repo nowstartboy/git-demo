@@ -664,7 +664,7 @@ def spectrum1(rsa300,average, startFreq, stopFreq, span, rbw,vbw, str_time, coun
 	j1 = 0
 	point=[] #画框在整个界面的坐标信息，用于鼠标坐标相应
 	point_xy=[]  #画框的坐标信息 ，用于画框
-	print('average:',average)
+	#print('average:',average)
 	for i in range(len(b)):
 		# 跳过空数据
 		if len(b[i]) > 1:
@@ -675,14 +675,6 @@ def spectrum1(rsa300,average, startFreq, stopFreq, span, rbw,vbw, str_time, coun
 			s2_y = average + 6
 			# s3_x = b[i][0]
 			s3_y = np.amax(d[i])
-			# s4_x = b[i][-1]
-			# s4_y = np.amax(b[i])
-			# 画出四条线
-			# plt.plot([s1_x, s1_x], [s1_y, s3_y])
-			# plt.plot([s1_x, s2_x], [s3_y, s3_y])
-			# plt.plot([s2_x, s2_x], [s3_y, s1_y])
-			# plt.plot([s1_x, s2_x], [s1_y, s2_y])
-			# plt.text((b[i][0]+b[i][-1])/2,s3_y,'%s'%j1)
 			
 			freq_len=freq[-1]-freq[0]
 			if freq_len>20e6:
@@ -697,11 +689,8 @@ def spectrum1(rsa300,average, startFreq, stopFreq, span, rbw,vbw, str_time, coun
 			point_y2=308*(-s3_y+20)/70+48
 			point.append([point_x1,point_x2,point_y2,point_y1])
 			point_xy.append([s1_x-u_x,s2_x+u_x,s1_y,s3_y])
-			# axes_score.plot([s1_x, s1_x], [s1_y, s3_y])
-			# axes_score.plot([s1_x, s2_x], [s3_y, s3_y])
-			# axes_score.plot([s2_x, s2_x], [s3_y, s1_y])
-			# axes_score.plot([s1_x, s2_x], [s1_y, s1_y])
-			# axes_score.text((b[i][0]+b[i][-1])/2,s3_y,'%s'%j1)
+
+
 	# 分别绘制局部的子图
 	j = 0
 	Sub_Spectrum=[]     #存当前扫描频率
@@ -712,6 +701,7 @@ def spectrum1(rsa300,average, startFreq, stopFreq, span, rbw,vbw, str_time, coun
 	Sub_band=[]         #存带宽
 	Sub_peak=[]         #存峰值
 	Sub_illegal=[]      #存当前信号段合法与否
+	Sub_type=[]         #信号业务类型
 	#print (len(b))
 	for i in range(len(b)):
 		if len(b[i]) > 1:
@@ -735,13 +725,7 @@ def spectrum1(rsa300,average, startFreq, stopFreq, span, rbw,vbw, str_time, coun
 
 			#print ('have signals:',i+1)
 			#band_t, peak_t, peak_tf ,draw_Sub_Spectrum,draw_Sub_Spectrum2= spectrum0(rsa300,b_f, e_f, str_time, j, count, str_tt1, str_tt2,longitude,latitude,rbw,vbw)
-			''' 
-			plt.plot(b[i], d[i])
-			plt.xlabel('Frequency (Hz)')
-			plt.ylabel('Amplitude (dBmV)')
-			plt.title('Spectrum')
-			plt.show()
-			'''
+
 			band_t=e_f-b_f
 			peak_t=np.amax(d[i])
 			peak_tf=freq[b[i][np.argmax(d[i])]]
@@ -763,14 +747,17 @@ def spectrum1(rsa300,average, startFreq, stopFreq, span, rbw,vbw, str_time, coun
 			
 			#判断信号是否合法
 			illegal=0  #0表示非法
-			reflect_inf1={'0': [116.43, 39.9, 940*1e6, 950*1e6]}
+			business_type =0 #表示未知
+			reflect_inf1={'0': [940*1e6, 950*1e6,'移动']}
 			#print ('reflect_inf:',reflect_inf1)
 			for i in reflect_inf1:
 				#print (i)
-				if freq_cf>=reflect_inf1[i][2] and freq_cf<=reflect_inf1[i][3]:
+				if freq_cf>=reflect_inf1[i][0] and freq_cf<=reflect_inf1[i][1]:
 					illegal=1
+					business_type = reflect_inf1[i][2]
 					break
 			Sub_illegal.append(illegal)
+			Sub_type.append(business_type)
 
 			#判断是否有重复频段,有则序号加1
 			if not Sub_cf_all:
@@ -805,7 +792,7 @@ def spectrum1(rsa300,average, startFreq, stopFreq, span, rbw,vbw, str_time, coun
 	#print (Sub_band,Sub_cf_channel)
 
 	#draw_Spectrum_total=1
-	return head,data1,Sub_cf_channel,Sub_span,Sub_cf,Sub_band,Sub_Spectrum,Sub_Spectrum2,freq, traceData,point,point_xy,Sub_peak,num_signal,Sub_illegal
+	return head,data1,Sub_cf_channel,Sub_span,Sub_cf,Sub_band,Sub_Spectrum,Sub_Spectrum2,freq, traceData,point,point_xy,Sub_peak,num_signal,Sub_illegal,Sub_type
 # 返回原始的频谱数据
 
 # 一次细扫，扫每一个方框的信号；输入参数：起始频率、终止频率、任务名称，方框编号，计数、细扫的时间
@@ -1587,9 +1574,12 @@ def importData_cu(task_name,file_name,raw_path):#task_name就是文件夹的名�
     end_time_cu=c_cu['Task_E'][0]
     path = raw_path+"//"+file_name+'.csv'
     df_cu = pandas.read_csv(path)
-    num = int(len(df_cu)/801)
-    x_mat = np.array(df_cu['frequency']).reshape(num,801)
-    y_mat = np.array(df_cu['power']).reshape(num, 801)
+    columns=df_cu.columns
+    #num = int(len(df_cu)/801)
+    #x_mat = np.array(df_cu['frequency']).reshape(num,801)
+    #y_mat = np.array(df_cu['power']).reshape(num, 801)
+    x_mat = np.array(columns[3:])
+    y_mat = np.array(df_cu[columns[3:]].values)
     return start_freq_cu,end_freq_cu,x_mat,y_mat,start_time_cu,end_time_cu
 
 # 细扫描，返回某一次细扫描的起始频率，终止频率，带宽，中心频率，频率数据，功率数据
@@ -2046,7 +2036,7 @@ def rmbt_facility_freq_emenv3(task_name,start_time,end_time,ssid,mfid='110000014
 
 
 
-def rmbt_freq_occupancy(span,start_time,end_time,startFreq,stopFreq,longitude,latitude,height,trace1,average,mfid='11000001400001',addr='aasfasdfasfasdf',amplitudeunit='01'):
+def rmbt_freq_occupancy(span,start_time,end_time,startFreq,stopFreq,longitude,latitude,height,trace1,head,average,mfid='11000001400001',addr='aasfasdfasfasdf',amplitudeunit='01'):
     step = span / float(801)
     startFreq1 = Decimal(startFreq/1e6).quantize(Decimal('0.0000000'))
     stopFreq1 = Decimal(stopFreq/1e6).quantize(Decimal('0.0000000'))
@@ -2060,16 +2050,19 @@ def rmbt_freq_occupancy(span,start_time,end_time,startFreq,stopFreq,longitude,la
     z = pandas.DataFrame({})
     point = np.arange(0,801,1)
     z['freq_point'] = point
-    z['freq_startFreq'] = trace1['frequency'][0:801]
+    #z['freq_startFreq'] = trace1['frequency'][0:801]
+    z['freq_startFreq'] = head #频率
     peak_list = []
     mid_list = []
     occ1 = []
-    for i in z['freq_startFreq']:
-        temp = trace1[trace1['frequency']==i]
-        temp1 = np.sort(temp['power'])
-        peak = np.max(temp['power'].values)
+    for i in range(len(z['freq_startFreq'])):
+        #temp = trace1[trace1['frequency']==i]
+        temp = trace1[:,i]
+        temp1 = np.sort(temp)
+        #peak = np.max(temp)
+        peak = temp1[-1]
         mid = temp1[int(len(temp)/2)]
-        occ = len(temp[temp['power']>average+6])/float(len(temp))
+        occ = len(temp[temp>average+6])/float(len(temp))
         occ = round(occ,2)
         occ1.append(occ*100)
         mid_list.append(mid)
