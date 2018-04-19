@@ -61,6 +61,7 @@ longitude=-1  #经度
 latitude=-1  #纬度
 height=-1  #高度
 GPS_end=False
+has_rect = False
 
 lines=[]  #记录检测信号提示框
 txts=[]
@@ -127,6 +128,7 @@ class WorkerThread(threading.Thread):     #画实时监测信号动态图
 		global lines
 		global txts
 		global detection_state
+		global has_rect
 		global longitude
 		global latitude
 		global height
@@ -193,8 +195,66 @@ class WorkerThread(threading.Thread):     #画实时监测信号动态图
 			count += 1
 			str_tt1 = str(datetime.datetime.now().strftime('%F %H:%M:%S'))  # 内部扫频的时刻
 			str_tt2 = str(datetime.datetime.now().strftime('%F-%H-%M-%S'))  # 作为内部细扫的文件名
-			head,data1,Sub_cf_channel,Sub_span,Sub_cf,Sub_band,Sub_Spectrum1,Sub_Spectrum2,freq1,traceData1,point,point_xy,Sub_peak,num_signal_new,Sub_illegal,Sub_type= method.spectrum1(self.rsa_true,average, startFreq, stopFreq, span, self.rbw, self.vbw, str_time, count, str_tt1, str_tt2,longitude_set,latitude_set,num_signal,Sub_cf_all)
+			head,data1,Sub_cf_channel,Sub_span,Sub_cf,Sub_band,Sub_peak,Sub_Spectrum1,Sub_Spectrum2,freq1,traceData1,point,point_xy,num_signal_new,Sub_illegal,Sub_type= method.spectrum1(self.rsa_true,average, startFreq, stopFreq, span, self.rbw, self.vbw, str_time, count, str_tt1, str_tt2,longitude_set,latitude_set,num_signal,Sub_cf_all)
 			num_signal=num_signal_new
+			#把不重复信号给滤除掉
+			Sub_cf_length = len(Sub_cf_all) #已经有多少种不重复信号
+			if Sub_cf:
+				if not Sub_cf_all:
+					Sub_cf_all=Sub_cf[:]
+					
+					#输入初始框的内容
+					#在右边的列表里显示信号段信息
+					for i in range(len(Sub_cf)):
+						#保存列表里每一行数据的来源数据段
+						Sub_Spectrum_freq.append(Sub_Spectrum1)
+						Sub_Spectrum_trace.append(Sub_Spectrum2)
+						#将数据信息插入列表
+						panelOne1.list_ctrl.InsertItem(i,str(i+1))
+						panelOne1.list_ctrl.SetItem(i,1,str(Sub_cf[i]/1e6))
+						panelOne1.list_ctrl.SetItem(i,2,str(Sub_band[i]/1e6))
+						panelOne1.list_ctrl.SetItem(i,3,str(Sub_peak[i]))
+						panelOne1.list_ctrl.SetItem(i,4,str(Sub_type[i]))   #业务类型暂时不知道
+						#如果判定为不合格则标注为红色
+						if Sub_illegal[i]==0:
+							panelOne1.list_ctrl.SetItemBackgroundColour(i, "red")
+					
+				else:
+					for cf_i in range(len(Sub_cf)):
+						divide_cf = array(Sub_cf_all)-Sub_cf[cf_i]
+						#判断是否有重复信号（cf在一定范围内则算作重复），如果有重复，则给出是与第几个列表信号重复
+						divide_no = 0 
+						while divide_no<Sub_cf_length:
+							if abs(divide_cf[divide_no])<=0.2*1e6:
+								break;
+							divide_no += 1
+						if divide_no == Sub_cf_length:
+							#与之前的信号都不重复,记录频段信号来源
+							Sub_Spectrum_freq.append(Sub_Spectrum1)
+							Sub_Spectrum_trace.append(Sub_Spectrum2)
+							#直接在列表中加入该信号
+							Sub_cf_all.append(Sub_cf[cf_i])
+							Sub_cf_length += 1
+							panelOne1.list_ctrl.InsertItem(divide_no,str(divide_no+1))
+							panelOne1.list_ctrl.SetItem(divide_no,1,str(Sub_cf[cf_i]/1e6))
+							panelOne1.list_ctrl.SetItem(divide_no,2,str(Sub_band[cf_i]/1e6))
+							panelOne1.list_ctrl.SetItem(divide_no,3,str(Sub_peak[cf_i]))
+							panelOne1.list_ctrl.SetItem(divide_no,4,str(Sub_type[cf_i]))   #业务类型暂时不知道
+							#如果判定为不合格则标注为红色
+							if Sub_illegal[cf_i]==0:
+								panelOne1.list_ctrl.SetItemBackgroundColour(divide_no, "red")
+						else:
+							#如果重复了，则与那个重复信号幅度做比较，如果比之大，则替换掉它的幅度
+							list_peak= panelOne1.list_ctrl.GetItem(divide_no, 3)
+							list_peak= float(list_peak.GetText())
+							list_cf =panelOne1.list_ctrl.GetItem(divide_no, 1).GetText()
+							if Sub_peak[cf_i]> list_peak:
+								panelOne1.list_ctrl.SetItem(divide_no,1,str(Sub_cf[cf_i]/1e6))
+								panelOne1.list_ctrl.SetItem(divide_no,2,str(Sub_band[cf_i]/1e6))
+								panelOne1.list_ctrl.SetItem(divide_no,3,str(Sub_peak[cf_i]))
+								Sub_Spectrum_freq[divide_no]=Sub_Spectrum1
+								Sub_Spectrum_trace[divide_no]=Sub_Spectrum2
+
 
 			#输出到底有多少信号
 			if count % 100==0:
@@ -209,10 +269,12 @@ class WorkerThread(threading.Thread):     #画实时监测信号动态图
 			# self.window.l_user.set_ydata(self.window.traceData)
 			self.window.axes_score.set_xlim(self.window.freq[0],self.window.freq[-1])
 			self.window.l_user.set_data(self.window.freq,self.window.traceData)
-			for i in range(len(lines)):
-				lines[i][0].remove()
-			for j in range(len(txts)):
-				txts[j].remove()
+			if has_rect:
+				for i in range(len(lines)):
+					lines[i][0].remove()
+				for j in range(len(txts)):
+					txts[j].remove()
+				has_rect = False
 			lines=[]
 			txts=[]
 			for i in range(len(point_xy)):
@@ -229,10 +291,12 @@ class WorkerThread(threading.Thread):     #画实时监测信号动态图
 				lines.append(line)
 				txt=self.window.axes_score.text((point_xy[i][0]+point_xy[i][1])/2,point_xy[i][3],'%s'%j1,color='w')
 				txts.append(txt)
+				has_rect = True
 			self.window.axes_score.draw_artist(self.window.l_user)
 			self.window.canvas.draw()
 			
 			#在右边的列表里显示信号段信息
+			'''
 			for i in range(len(Sub_cf)):
 				#print (i)
 				panelOne1.list_ctrl.InsertItem(i+signal_count,str(i+1))
@@ -242,6 +306,7 @@ class WorkerThread(threading.Thread):     #画实时监测信号动态图
 				#如果判定为不合格则标注为红色
 				if Sub_illegal[i]==0:
 					panelOne1.list_ctrl.SetItemBackgroundColour(i+signal_count, "red")
+			'''
 			signal_count += len(Sub_cf)
 			
 			trace1.append(data1)
@@ -262,7 +327,12 @@ class WorkerThread(threading.Thread):     #画实时监测信号动态图
 				trace2=[]
 				
 				
-		is_band=0
+		#保存数据段
+		panelOne1.Sub_freq=Sub_Spectrum_freq
+		panelOne1.Sub_Spectrum=Sub_Spectrum_trace
+		panelOne1.lines=lines
+		panelOne1.txts=txts
+		print (len(panelOne1.Sub_Spectrum))
 		# 获取测试时间,保存原始频谱数据
 		str_time1 = str(datetime.datetime.now().strftime('%F-%H-%M-%S'))  # 结束的准确时间，直接传到数据库中自动转化成datetime格式
 		file_path=os.getcwd()+"\\data1\\%s\\"%(str_time+'--'+str_time1 + ("spectrum%d" % t))
@@ -588,10 +658,12 @@ class MyPanel1 ( wx.Panel ):
 		self.bx1.SetFont(font)
 		self.sbSizer35 = wx.StaticBoxSizer( self.bx1, wx.VERTICAL )
 		self.list_ctrl = wx.ListCtrl(self, size=(-1,380),style=wx.LC_REPORT|wx.LC_HRULES|wx.LC_VRULES|wx.BORDER_SUNKEN)
-		self.list_ctrl.InsertColumn(0, 'id',width=40)
-		self.list_ctrl.InsertColumn(1, 'cf/MHz',width=80)
+		self.list_ctrl.InsertColumn(0, 'id',width=30)
+		self.list_ctrl.InsertColumn(1, 'cf/MHz',width=75)
 		self.list_ctrl.InsertColumn(2, 'band/MHz', width=80)
-		self.list_ctrl.InsertColumn(3, '业务类型', width=100)
+		self.list_ctrl.InsertColumn(3, 'peak/dBmV',width = 80)
+		self.list_ctrl.InsertColumn(4, '业务类型', width=65)
+		self.Bind(wx.EVT_LIST_ITEM_ACTIVATED, self.OnClick_list, self.list_ctrl)
 		
 		self.sbSizer35.Add(self.list_ctrl,0,wx.ALL|wx.EXPAND,0)
 		
@@ -687,6 +759,12 @@ class MyPanel1 ( wx.Panel ):
 		
 		self.threads3=[]
 		
+		#记录列表自频段的信息
+		self.Sub_freq=[]
+		self.Sub_Spectrum=[]
+		self.lines = []
+		self.txts =[]
+		
 	def change_to_Spectrum(self):
 		print ("sub Loading...")
 		if self.panelOne_one.IsShown():
@@ -759,14 +837,40 @@ class MyPanel1 ( wx.Panel ):
 		else:
 			wx.MessageBox('The current working mode isn\'t data_import', "Message" ,wx.OK | wx.ICON_INFORMATION)
 	
+	#数据导入显示
 	def stop_import_show(self,event):
 		while self.threads3:
 			thread=self.threads3[0]
 			thread.stop()
 			self.threads3.remove(thread)
 	
+	#选择回放导入数据集
 	def OnCombo(self,event):
 		self.task_name=self.m_combo2.GetValue()
+	
+	#列表点击事件
+	def OnClick_list(self,event):
+		global has_rect
+		row=int(event.GetText())-1
+		#去除最后一帧的框线
+		if self.lines and self.txts and has_rect:
+			for i in range(len(self.lines)):
+				self.lines[i][0].remove()
+			for j in range(len(self.txts)):
+				self.txts[j].remove()
+			has_rect = False
+		self.lines=[]
+		self.txts=[]
+		if self.panelOne_one.IsShown():
+			self.panelOne_one.axes_score.set_xlim(self.Sub_freq[row][0],self.Sub_freq[row][-1])
+			self.panelOne_one.l_user.set_data(self.Sub_freq[row],self.Sub_Spectrum[row])
+			self.panelOne_one.axes_score.draw_artist(self.panelOne_one.l_user)
+			self.panelOne_one.canvas.draw()
+		else:
+			self.panelOne_two.axes_score.set_xlim(self.Sub_freq[row][0],self.Sub_freq[row][-1])
+			self.panelOne_two.l_user.set_data(self.Sub_freq[row],self.Sub_Spectrum[row])
+			self.panelOne_two.axes_score.draw_artist(self.panelOne_two.l_user)
+			self.panelOne_two.canvas.draw()
 
 
 ###########################################################################
@@ -2558,10 +2662,10 @@ class MyPanel3 ( wx.Panel ):
 		bSizer285=wx.BoxSizer(wx.HORIZONTAL)
 		self.m_choice42Choices = list(reversed(os.listdir(os.getcwd()+'\\data1')))
 		self.choice_Num=len(self.m_choice42Choices)
-		self.m_combo1 = wx.ComboBox( self, wx.ID_ANY, u'请选择文件...',wx.DefaultPosition, (200,20), self.m_choice42Choices, 0 )
+		self.m_combo1 = wx.ComboBox( self, wx.ID_ANY, u'请选择文件...',wx.DefaultPosition, (300,20), self.m_choice42Choices, 0 )
 		self.m_combo1.Bind(wx.EVT_COMBOBOX, self.OnCombo1)
 		bSizer285.Add( self.m_combo1, 0, wx.ALL, 5 )
-		self.m_staticText127 = wx.StaticText( self, wx.ID_ANY, "                  ", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_staticText127 = wx.StaticText( self, wx.ID_ANY, "           ", wx.DefaultPosition, wx.DefaultSize, 0 )
 		self.m_staticText127.Wrap( -1 )
 		bSizer285.Add( self.m_staticText127,0, wx.ALL, 5 )
 		#bSizer285.AddStretchSpacer(1)
@@ -2826,7 +2930,17 @@ class MyPanel3 ( wx.Panel ):
 			#print (axis_x,axis_y)
 			# axes_score.bar(axis_x, array(axis_y)+10)
 			# self.axes_score4.bar(axis_x, axis_y)
+			
+			above_index=[i for i in range(len(axis_y)) if axis_y[i]>=0.01]
+			#print (above_index,axis_y[above_index[0]])
+			label=[str(axis_y[i])[0:5]+'%' for i in above_index]
+			#print (label)
 			axes_score.bar(axis_x, axis_y, step/2)
+			
+			for i in range(len(above_index)):
+				#axes_score.plot(above_index[i],axis_y[above_index[i]],'ro')
+				axes_score.get_children()[above_index[i]].set_color('r')
+				txt=axes_score.text(axis_x[above_index[i]]-0.3*step,axis_y[above_index[i]],'%s'%label[i],fontsize=7,color='r')
 			
 		else:
 			print('empty')
@@ -2879,12 +2993,17 @@ class MyPanel3 ( wx.Panel ):
 		axis_x=list(range(len(occ1)))
 		peak=max(occ1)
 		peak_index=argmax(occ1)
-		label=str(starttime+datetime.timedelta(seconds=slot2*peak_index))[0:19];
+		above_index=[i for i in range(len(occ1)) if occ1[i]>=1]
+		label=[str(starttime+datetime.timedelta(seconds=slot2*i))[0:19]+' '+str(occ1[i])[0:4]+'%' for i in above_index];
 		#axes_score.plot(axis_x,occ1)
 		step=1
+		peak_occ=argmax(occ1)
 		axes_score.bar(axis_x,occ1,step/2)
-		axes_score.plot(peak_index,peak,'ro')
-		txt=axes_score.text(peak_index-1,peak,'%s'%label,color='r')
+		
+		for i in range(len(above_index)):
+			axes_score.plot(above_index[i],occ1[above_index[i]],'ro')
+			axes_score.get_children()[above_index[i]].set_color('r')
+			txt=axes_score.text(above_index[i]-1,occ1[above_index[i]],'%s'%label[i],fontsize=7,color='r')
 		#print (occ1)
 		return figure_score,axes_score
 		

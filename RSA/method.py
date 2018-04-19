@@ -792,7 +792,7 @@ def spectrum1(rsa300,average, startFreq, stopFreq, span, rbw,vbw, str_time, coun
 	#print (Sub_band,Sub_cf_channel)
 
 	#draw_Spectrum_total=1
-	return head,data1,Sub_cf_channel,Sub_span,Sub_cf,Sub_band,Sub_Spectrum,Sub_Spectrum2,freq, traceData,point,point_xy,Sub_peak,num_signal,Sub_illegal,Sub_type
+	return head,data1,Sub_cf_channel,Sub_span,Sub_cf,Sub_band,Sub_peak,Sub_Spectrum,Sub_Spectrum2,freq, traceData,point,point_xy,num_signal,Sub_illegal,Sub_type
 # 返回原始的频谱数据
 
 # 一次细扫，扫每一个方框的信号；输入参数：起始频率、终止频率、任务名称，方框编号，计数、细扫的时间
