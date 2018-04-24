@@ -423,18 +423,37 @@ def bandwidth3(peakPower,peakFreq,trace,freq):
 		if trace[peak_index1]<trace_max-6:
 			pass
 		else:
-			a2 = peak_index1
 			break
 		peak_index1 -= 1
 	while peak_index2<len(trace):
 		if trace[peak_index2]<trace_max-6:
 			pass
 		else:
-			a1 = peak_index2
 			break
 		peak_index2 += 1
-
-	bandWidth = freq[a2] - freq[a1]
+	
+	#为了防止波形多变,多计算一种类型，两种进行综合分析
+	peak_index_new1 = a2
+	peak_index_new2 = a1
+	while peak_index_new1>0:
+		if trace[peak_index_new1]<trace_max-10:
+			pass
+		else:
+			break
+		peak_index_new1 -= 1
+	while peak_index_new2<len(trace)-1:
+		if trace[peak_index_new2]<trace_max-10:
+			pass
+		else:
+			break
+		peak_index_new2 += 1
+	bandWidth1 = freq[peak_index1] - freq[peak_index2]
+	bandWidth2 = freq[peak_index_new1] - freq[peak_index_new2]
+	#print (bandWidth1,bandWidth2)
+	if abs(bandWidth1 - bandWidth2)>1e6:
+		bandWidth = bandWidth2
+	else:
+		bandWidth = bandWidth1
 	freq_cf = freq[a1]+bandWidth/2
 	return freq_cf, bandWidth
 
@@ -636,7 +655,7 @@ def spectrum1(rsa300,average, startFreq, stopFreq, span, rbw,vbw, str_time, coun
 			c.append(trace[i])
 			freq_list.append(freq[i])
 			#print (a)
-		elif traceData[i]<average+4:
+		elif traceData[i]<average + 4:
 			if a:
 				#print (a)
 				b.append(a)
@@ -1798,14 +1817,21 @@ def rmbt_facility_freqband_emenv(task_name,span,start_time,end_time,longitude,la
     threshold = Decimal(threshold).quantize(Decimal('0.00'))
     height = Decimal(height).quantize(Decimal('0.00'))
     ######legal=1是合法0是非法
-    legal_sig = inf[inf['legal']==1]
-    legal_frame_num = len(legal_sig['COUNT1'].drop_duplicates())
+    legal_sig = inf[inf['legal']==0]
+    legal_frame_num = len(legal_sig['COUNT1'])
+    legal_sig1 = inf[inf['legal']==1]
+    legal_frame_num1 = len(legal_sig1['COUNT1'])
+    print (legal_frame_num,legal_frame_num1)
     legal_band = np.sum(legal_sig['FreQ_BW'].values)
-    occ1 = float(legal_band*100)/(span*legal_frame_num)
+    if legal_frame_num == 0:
+        occ1 = 0.01
+    else:
+        occ1 = float(legal_band*100)/(span*legal_frame_num)
     occ1 = Decimal(occ1).quantize(Decimal('0.00'))
     occ2 = Decimal(occ2).quantize(Decimal('0.00'))
     occ3  =100 - occ1
     occ3 = Decimal(occ3).quantize(Decimal('0.00'))
+    print (occ1,occ2,occ3)
     con.close()
     con = mdb.connect(mysql_config['host'], mysql_config['user'], mysql_config['password'],
                       '110000_rmdsd')
@@ -2011,10 +2037,10 @@ def rmbt_facility_freq_emenv3(task_name,start_time,end_time,ssid,mfid='110000014
         statisendday = str(end_time)
         servicedid = df_r[sig]['Signal_No'][0]
         cf = df_r[sig]['FREQ_CF'].values
-        cf_avg = np.average(cf) / 10e6
+        cf_avg = np.average(cf) / 1e6
         cf_avg = Decimal(cf_avg).quantize(Decimal('0.0000000'))
         bandwidth = df_r[sig]['FreQ_BW'].values
-        band_avg = np.average(bandwidth) / 10e6
+        band_avg = np.average(bandwidth) / 1e6
         band_avg = Decimal(band_avg).quantize(Decimal('0.0000000'))
         maxamplitude = np.max(df_r[sig]['peakpower'].values)
         maxamplitude = Decimal(maxamplitude).quantize(Decimal('0.00'))

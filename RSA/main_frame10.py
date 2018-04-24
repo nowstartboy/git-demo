@@ -312,7 +312,7 @@ class WorkerThread(threading.Thread):     #画实时监测信号动态图
 			trace1.append(data1)
 			trace2.append(data1[3:])
 			
-			if time.time()-load_time>60 and not work_state:
+			if time.time()-load_time>34 and not work_state:
 				trace2 = array(trace2)
 				time_now=str(datetime.datetime.now().strftime('%F %H:%M:%S')) # 总表的起始时间
 				print (1)
@@ -2912,6 +2912,7 @@ class MyPanel3 ( wx.Panel ):
 		axes_score.set_title("The Signal_Channel occupancy")
 		axes_score.set_xlabel("freq/MHz",fontsize=12)
 		axes_score.set_ylabel("percentage/%")
+		#axes_score.grid(True,color='w')
 		if not b.empty:
 			print('not empty')
 			channel_occupied = []
@@ -2922,7 +2923,7 @@ class MyPanel3 ( wx.Panel ):
 				a = pandas.read_sql(sql1, con)
 				a = a.drop_duplicates()  # 去电重复项
 				channel_occupied1 = len(a) / float(b['COUNT']*roid)
-				channel_occupied.append(channel_occupied1)
+				channel_occupied.append(channel_occupied1*100)
 
 
 			axis_x = arange(freq_start, freq_stop, step)
@@ -2931,17 +2932,18 @@ class MyPanel3 ( wx.Panel ):
 			# axes_score.bar(axis_x, array(axis_y)+10)
 			# self.axes_score4.bar(axis_x, axis_y)
 			
-			above_index=[i for i in range(len(axis_y)) if axis_y[i]>=0.01]
+			above_index=[i for i in range(len(axis_y)) if axis_y[i]>=1]
 			#print (above_index,axis_y[above_index[0]])
 			label=[str(axis_y[i])[0:5]+'%' for i in above_index]
-			#print (label)
-			axes_score.bar(axis_x, axis_y, step/2)
+			axes_score.bar(axis_x+step/2, axis_y, step)
+			axes_score.set_xticks(axis_x[::2])
+			#axes_score.set_xticklabels(axis_x,rotation=40,fontproperties=5)
+			#axes_score.set_xlim([axis_x[0],axis_x[-1]])
 			
 			for i in range(len(above_index)):
 				#axes_score.plot(above_index[i],axis_y[above_index[i]],'ro')
 				axes_score.get_children()[above_index[i]].set_color('r')
-				txt=axes_score.text(axis_x[above_index[i]]-0.3*step,axis_y[above_index[i]],'%s'%label[i],fontsize=7,color='r')
-			
+				txt=axes_score.text(axis_x[above_index[i]],axis_y[above_index[i]],'%s'%label[i],fontsize=7,color='r')
 		else:
 			print('empty')
 		return figure_score,axes_score
