@@ -3312,8 +3312,10 @@ class MyPanel4 ( wx.Panel ):
 			angel=sorted(self.angel_peak.keys())
 			#print (angel)
 			if len(angel)==36:
-				theta=array([float(j)*pi/180 for j in angel]+[float(angel[0]+360)*pi/180])
-				peak=array([self.angel_peak[i] for i in angel]+[self.angel_peak[angel[0]]])
+				# theta=array([float(j)*pi/180 for j in angel]+[float(angel[0]+360)*pi/180])
+				# peak=array([self.angel_peak[i] for i in angel]+[self.angel_peak[angel[0]]])
+				theta=array([float(j)*pi/180 for j in angel])
+				peak=array([self.angel_peak[i] for i in angel])
 			else:
 				theta=array([float(j)*pi/180 for j in angel])
 				peak=array([self.angel_peak[i] for i in angel])

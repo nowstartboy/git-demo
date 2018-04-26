@@ -1701,8 +1701,8 @@ def find_direction(rsa300,freq):
 	specSet.traceLength = c_int(801)
 	# specSet.window =
 	specSet.verticalUnit = c_int(4)
-	specSet.actualStartFreq = c_double(freq-0.1e6)
-	specSet.actualStopFreq = c_double(freq+0.1e6)
+	specSet.actualStartFreq = c_double(freq-0.3e6)
+	specSet.actualStopFreq = c_double(freq+0.3e6)
 	# specSet.actualFreqStepSize =c_double(50000.0)
 	# specSet.actualRBW =
 	# specSet.actualVBW =
