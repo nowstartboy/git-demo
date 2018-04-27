@@ -1350,7 +1350,7 @@ class MyPanel1_1 ( wx.Panel ):
 		self.axes_score.set_title('Spectrum')
 		self.axes_score.grid(True,color='w')
 		self.axes_score.set_xlabel('Frequency/Hz')
-		self.axes_score.set_ylabel('Amplitude/dBmVV')
+		self.axes_score.set_ylabel('Amplitude/dBmV')
 		self.canvas.draw()
 		#记录整次扫描存在的有效（有不同频谱）的信息
 		self.Sub_Spectrum=[]
@@ -3083,9 +3083,142 @@ class MyPanel4 ( wx.Panel ):
 		# bSizer86.Add( self.m_staticline13, 0, wx.EXPAND |wx.ALL, 0 )
 		'''
 		bSizer90=wx.BoxSizer(wx.HORIZONTAL)
+		bSizerLeft=wx.BoxSizer(wx.VERTICAL)
+		###############################################放置输入信息框
+		self.bxLetft=wx.StaticBox( self, wx.ID_ANY, u"信号强度信息表：" )
+		self.bxLetft.SetForegroundColour("SLATE BLUE")
+		fontLeft = wx.Font(10, wx.DECORATIVE,wx.NORMAL,wx.BOLD)
+		self.bxLetft.SetFont(fontLeft)
+		self.bSizer1 = wx.StaticBoxSizer( self.bxLetft, wx.HORIZONTAL )
+		#self.bSizer1 = wx.BoxSizer( wx.HORIZONTAL )
+		
+		self.bSizer2 = wx.BoxSizer( wx.VERTICAL )
+		
+		self.bSizer4 = wx.BoxSizer( wx.HORIZONTAL )
+		
+		self.m_staticText1 = wx.StaticText( self, wx.ID_ANY, u"中心频率：", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_staticText1.Wrap( -1 )
+		self.bSizer4.Add( self.m_staticText1, 0, wx.ALIGN_CENTER_VERTICAL|wx.ALL, 5 )
+		
+		self.m_textCtrl1 = wx.TextCtrl( self, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.bSizer4.Add( self.m_textCtrl1, 0, wx.ALIGN_CENTER_VERTICAL|wx.ALL, 5 )
+		
+		self.m_staticText2 = wx.StaticText( self, wx.ID_ANY, u"MHz", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_staticText2.Wrap( -1 )
+		self.bSizer4.Add( self.m_staticText2, 0, wx.ALIGN_CENTER_HORIZONTAL|wx.ALIGN_CENTER_VERTICAL|wx.ALL, 5 )
+		
+		
+		self.bSizer2.Add( self.bSizer4, 1, wx.EXPAND, 5 )
+		
+		self.bSizer5 = wx.BoxSizer( wx.HORIZONTAL )
+		
+		self.m_staticText3 = wx.StaticText( self, wx.ID_ANY, u"测向带宽：", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_staticText3.Wrap( -1 )
+		self.bSizer5.Add( self.m_staticText3, 0, wx.ALIGN_CENTER_VERTICAL|wx.ALL, 5 )
+		
+		self.m_textCtrl2 = wx.TextCtrl( self, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.bSizer5.Add( self.m_textCtrl2, 0, wx.ALIGN_CENTER_VERTICAL|wx.ALL, 5 )
+		
+		self.m_staticText4 = wx.StaticText( self, wx.ID_ANY, u"MHz", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_staticText4.Wrap( -1 )
+		self.bSizer5.Add( self.m_staticText4, 0, wx.ALIGN_CENTER_VERTICAL|wx.ALL, 5 )
+		
+		
+		self.bSizer2.Add( self.bSizer5, 1, wx.EXPAND, 5 )
+		
+		bSizer6 = wx.BoxSizer( wx.HORIZONTAL )
+		
+		self.m_staticText5 = wx.StaticText( self, wx.ID_ANY, u"参考电平：", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_staticText5.Wrap( -1 )
+		bSizer6.Add( self.m_staticText5, 0, wx.ALIGN_CENTER_VERTICAL|wx.ALL, 5 )
+		
+		self.m_textCtrl3 = wx.TextCtrl( self, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize, 0 )
+		bSizer6.Add( self.m_textCtrl3, 0, wx.ALIGN_CENTER_VERTICAL|wx.ALL, 5 )
+		
+		self.m_staticText6 = wx.StaticText( self, wx.ID_ANY, u"dB", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_staticText6.Wrap( -1 )
+		bSizer6.Add( self.m_staticText6, 0, wx.ALIGN_CENTER_VERTICAL|wx.ALL, 5 )
+		
+		
+		self.bSizer2.Add( bSizer6, 1, wx.EXPAND, 5 )
+		
+		
+		self.bSizer1.Add( self.bSizer2, 1, wx.EXPAND, 5 )
+		
+		self.bSizer3 = wx.BoxSizer( wx.VERTICAL )
+		
+		self.bSizer7 = wx.BoxSizer( wx.HORIZONTAL )
+		
+		self.m_staticText7 = wx.StaticText( self, wx.ID_ANY, u"RBW :", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_staticText7.Wrap( -1 )
+		self.bSizer7.Add( self.m_staticText7, 0, wx.ALIGN_CENTER_VERTICAL|wx.ALL, 5 )
+		
+		self.m_textCtrl4 = wx.TextCtrl( self, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.bSizer7.Add( self.m_textCtrl4, 0, wx.ALIGN_CENTER_VERTICAL|wx.ALL, 5 )
+		
+		self.m_staticText8 = wx.StaticText( self, wx.ID_ANY, u"kHz", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_staticText8.Wrap( -1 )
+		self.bSizer7.Add( self.m_staticText8, 0, wx.ALIGN_CENTER_VERTICAL|wx.ALL, 5 )
+		
+		
+		self.bSizer3.Add( self.bSizer7, 1, wx.EXPAND, 5 )
+		
+		self.bSizer8 = wx.BoxSizer( wx.HORIZONTAL )
+		
+		self.m_staticText9 = wx.StaticText( self, wx.ID_ANY, u"VBW :", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_staticText9.Wrap( -1 )
+		self.bSizer8.Add( self.m_staticText9, 0, wx.ALIGN_CENTER_VERTICAL|wx.ALL, 5 )
+		
+		self.m_textCtrl5 = wx.TextCtrl( self, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.bSizer8.Add( self.m_textCtrl5, 0, wx.ALIGN_CENTER_VERTICAL|wx.ALL, 5 )
+		
+		self.m_staticText11 = wx.StaticText( self, wx.ID_ANY, u"kHz", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_staticText11.Wrap( -1 )
+		self.bSizer8.Add( self.m_staticText11, 0, wx.ALIGN_CENTER_VERTICAL|wx.ALL, 5 )
+		
+		
+		self.bSizer3.Add( self.bSizer8, 1, wx.EXPAND, 5 )
+		
+		self.bSizer9 = wx.BoxSizer( wx.HORIZONTAL )
+		
+		self.m_staticText12 = wx.StaticText( self, wx.ID_ANY, u"", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_staticText12.Wrap( -1 )
+		self.bSizer9.Add( self.m_staticText12, 0, wx.ALIGN_CENTER_VERTICAL|wx.ALL, 5 )
+		
+		
+		self.bSizer3.Add( self.bSizer9, 1, wx.EXPAND, 5 )
+		self.bSizer1.Add( self.bSizer3, 1, wx.EXPAND, 5 )
+		bSizerLeft.Add(self.bSizer1, 2 ,wx.EXPAND,0)
+		
+		self.m_staticline15 = wx.StaticLine( self, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.LI_VERTICAL )
+		bSizerLeft.Add( self.m_staticline15, 0, wx.EXPAND |wx.ALL, 1 )
+		
+		###############################################放置坐标轴
+		self.m_panelLeft = wx.Panel( self, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
+		bSizerLeft.Add( self.m_panelLeft, 3, wx.EXPAND |wx.ALL, 0 )
+		
+		self.figure_scoreLeft = Figure((6.56,2),100)
+		self.canvasLeft = FigureCanvas(self.m_panelLeft, wx.ID_ANY, self.figure_scoreLeft)
+		self.axesLeft = self.figure_scoreLeft.add_subplot(111,facecolor='k')
+		#self.axesLeft.set_autoscale_on(False) #关闭坐标轴自动缩放
+		self.traceData=[-100]*801
+		start_freq,end_freq = 930e6,950e6
+		self.freq=range(int(start_freq),int(end_freq)+int((end_freq-start_freq)/800),int((end_freq-start_freq)/800))
+		self.l_userLeft,=self.axesLeft.plot(self.freq, self.traceData, 'y')
+		#self.axesLeft.axhline(y=average, color='r')
+		self.axesLeft.set_ylim(-50,20)
+		self.axesLeft.set_title('Spectrum')
+		self.axesLeft.grid(True,color='w')
+		self.axesLeft.set_xlabel('Frequency/Hz')
+		self.axesLeft.set_ylabel('Amplitude/dBmV')
+		self.canvasLeft.draw()
+		
+		self.m_staticline14 = wx.StaticLine( self, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.LI_VERTICAL )
+		bSizerLeft.Add( self.m_staticline14, 0, wx.EXPAND |wx.ALL, 1 )
+		
+		###############################################地图放置
 		bSizer91=wx.BoxSizer(wx.VERTICAL)
 		self.m_panel10 = wx.Panel( self, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
-		
 		self.m_htmlWin3 = wx.html2.WebView.New(self.m_panel10,size=(660,600))
 		#self.bSizer102.Add( self.m_htmlWin2, 0, wx.ALL, 0 )
 		self.file_html='file:///'+os.getcwd()+'/map6.html'
@@ -3093,17 +3226,15 @@ class MyPanel4 ( wx.Panel ):
 		self.Bind(wx.html2.EVT_WEBVIEW_LOADED,self.direction_html,self.m_htmlWin3)
 		#self.point={'1':[116.5,39.8]}
 		self.point={}
-		
-		
-		
 		bSizer91.Add( self.m_panel10, 0, wx.EXPAND |wx.ALL, 0 )
-		bSizer90.Add( bSizer91, 3, wx.EXPAND, 0 )
+		bSizerLeft.Add(bSizer91,3,wx.EXPAND,0)
 		
+		bSizer90.Add( bSizerLeft, 10, wx.EXPAND, 0 )
+		
+		##################################################右侧数据显示框
 		bSizer92=wx.BoxSizer(wx.VERTICAL)
-		
-		
+		'''
 		bSizer88 = wx.BoxSizer( wx.HORIZONTAL )
-		
 		self.m_staticText41 = wx.StaticText( self, wx.ID_ANY, u"测向频率：", wx.DefaultPosition, wx.DefaultSize, 0 )
 		self.m_staticText41.Wrap( -1 )
 		bSizer88.Add( self.m_staticText41, 0, wx.ALL|wx.ALIGN_CENTRE, 5 )
@@ -3119,7 +3250,7 @@ class MyPanel4 ( wx.Panel ):
 		bSizer92.Add( bSizer88, 1, wx.ALL, 0 )
 		self.m_staticline14 = wx.StaticLine( self, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.LI_VERTICAL )
 		bSizer92.Add( self.m_staticline14, 0, wx.EXPAND |wx.ALL, 1 )
-		
+		'''
 		############################################信号测量控制按钮
 		# self.bx2=wx.StaticBox( self, wx.ID_ANY, u"信号强度测量:" )
 		# #bx1.SetBackgroundColour("MEDIUM GOLDENROD")
@@ -3204,7 +3335,7 @@ class MyPanel4 ( wx.Panel ):
 		self.sbSizer5 = wx.StaticBoxSizer(self.bx1, wx.VERTICAL )
 		
 		self.m_panel11 = wx.Panel( self, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
-		self.figure_score1 = Figure((2.15,2.4),100)
+		self.figure_score1 = Figure((2.2,2.7),100)
 		self.canvas1=FigureCanvas(self.m_panel11, -1, self.figure_score1)
 		self.axes_score1 = self.figure_score1.add_subplot(111,facecolor='w')
 		self.l_user1,=self.axes_score1.plot([], [], 'b')
@@ -3243,32 +3374,84 @@ class MyPanel4 ( wx.Panel ):
 		
 		
 		#改变注册表，使得python 默认的ie版本为ie11,这样map功能的箭头和线条才能加上去
+		self.input_state = 1 #输入参数状态正常
 
+	def getInput(self):
+		self.input_state = 0
+		freq_string=self.m_textCtrl1.GetValue()
+		#cf
+		try:
+			freq=float(freq_string)*1e6
+		except (ValueError,TypeError) as e:
+			wx.MessageBox(u' 频率输入须为数值', "Message" ,wx.OK | wx.ICON_INFORMATION)
+			return
+		#span
+		span_string=self.m_textCtrl2.GetValue()
+		try:
+			span=float(span_string)*1e6
+		except (ValueError,TypeError) as e:
+			wx.MessageBox(u' 带宽输入须为数值', "Message" ,wx.OK | wx.ICON_INFORMATION)
+			return
+		#参考电平
+		rf_level=self.m_textCtrl3.GetValue()
+		try:
+			rfLevel=float(rf_level)
+		except (ValueError,TypeError) as e:
+			wx.MessageBox(u' 参考电平输入须为数值', "Message" ,wx.OK | wx.ICON_INFORMATION)
+			return
+		#RBW
+		rbw=self.m_textCtrl4.GetValue()
+		if rbw == '':
+			rbw = 1   #默认值为1kHz
+			self.m_textCtrl4.SetValue(str(rbw))
+		else:
+			try:
+				rbw=float(rbw)*1e3
+			except (ValueError,TypeError) as e:
+				wx.MessageBox(u' RBW输入须为数值', "Message" ,wx.OK | wx.ICON_INFORMATION)
+				return
+		#VBW
+		vbw=self.m_textCtrl5.GetValue()
+		if vbw == '':
+			vbw = 1   #默认值为1kHz
+			self.m_textCtrl5.SetValue(str(vbw))
+		else:
+			try:
+				vbw=float(vbw)*1e3
+			except (ValueError,TypeError) as e:
+				wx.MessageBox(u' VBW输入须为数值', "Message" ,wx.OK | wx.ICON_INFORMATION)
+				return
+		self.input_state = 1
+		return [freq,span,rfLevel,rbw,vbw]
 
 	def compute_angel(self,event):
 		if connect_state==0:
 			wx.MessageBox('No instruments connected  .', "Error" ,wx.OK | wx.ICON_ERROR)
 		else:
 			angel=self.get_direction()
+			#angel = 100
 			#print (angel)
 			if angel==-1:
 				wx.MessageBox('获取方向失败  .', "Error" ,wx.OK | wx.ICON_ERROR)
 			else:
-				freq_string=self.m_textCtrl13.GetValue()
-				try:
-					freq=float(freq_string)
-				except (ValueError,TypeError) as e:
-					wx.MessageBox(u' 频率输入须为数值', "Message" ,wx.OK | wx.ICON_INFORMATION)
-					return
-				print (freq)
-				peakPower=method.find_direction(rsa_true,freq*1e6)
-				i=self.list_ctrl.GetItemCount()
-				self.list_ctrl.InsertItem(i,str(i+1))
-				self.list_ctrl.SetItem(i,1,str(angel))
-				self.list_ctrl.SetItem(i,2,str(peakPower))
-				#self.names['textCtrl%s'%int(angel/10)].SetValue(str(peakPower)+'dBmV')
-				#print (peakPower)
-				self.angel_peak[angel]=10**(peakPower/10)
+				input_detail = self.getInput()
+				print (input_detail)
+				if self.input_state == 1:
+					peakPower,self.freq,self.traceData=method.find_direction(rsa_true,input_detail[0],input_detail[1])
+					print (self.traceData[0])
+					print (self.freq[0],self.freq[-1])
+					#####################将信号峰值显示到表格中
+					i=self.list_ctrl.GetItemCount()
+					self.list_ctrl.InsertItem(i,str(i+1))
+					self.list_ctrl.SetItem(i,1,str(angel))
+					self.list_ctrl.SetItem(i,2,str(peakPower))
+					#self.names['textCtrl%s'%int(angel/10)].SetValue(str(peakPower)+'dBmV')
+					#print (peakPower)
+					self.angel_peak[angel]=10**(peakPower/10)
+					#####################将整帧扫描到的信号显示到坐标轴中
+					self.axesLeft.set_xlim(self.freq[0],self.freq[-1])
+					self.l_userLeft.set_data(self.freq,self.traceData)
+					self.canvasLeft.draw()
 	
 	def clear_angel(self,event):
 		if connect_state==0:
@@ -3327,27 +3510,24 @@ class MyPanel4 ( wx.Panel ):
 			self.canvas = FigureCanvas(self.m_panel11, wx.ID_ANY, self.figure_score)
 			self.axes = self.figure_score.add_subplot(111,projection='polar',facecolor='w')
 			
+			#1、画圆形柱图
 			radii =10 * peak
 			width = pi / 50 * ones(N)
-			# bars = self.axes_score1.bar(theta, radii, width=width, bottom=0.0)
-			# for r, bar in zip(radii, bars):
-				# #bar.set_facecolor(plt.cm.viridis(r / 10.))
-				# bar.set_alpha(0.5)
+			bars = self.axes.bar(theta, radii, width=width, bottom=0.0)
+			for r, bar in zip(radii, bars):
+				bar.set_facecolor(plt.cm.viridis(r / 10.))
+				bar.set_alpha(0.5)
+			max_theta=theta[argmax(radii)]
+			#2、画辐射图
+			'''
 			xnew = linspace(theta.min(),theta.max(),300)
 			power_smooth = spline(theta,radii,xnew)
-			# print (theta)
-			# print (peak)
-			# print (radii*cos(theta))
-			# print (radii*sin(theta))
-
-			# for i in range(len(xnew)):
-				# print (xnew[i]*180/pi,power_smooth[i])
-			# print (len(xnew))
-			
+			max_theta=xnew[argmax(power_smooth)]
 			self.axes.plot(xnew,power_smooth,'b')
+			'''
 			self.canvas.draw()
 			
-			max_theta=xnew[argmax(power_smooth)]
+			
 			if max_theta>pi:
 				max_theta=max_theta-2*pi  #保证角度为[-pi,pi]
 			

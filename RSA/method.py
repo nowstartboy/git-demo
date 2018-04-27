@@ -1648,7 +1648,7 @@ def importData_uav(file_name,raw_path):
     # plt.show()
 
 # 测向输入就是一个频率输出就是对应的强度
-def find_direction(rsa300,freq):
+def find_direction(rsa300,freq,span):
 
 	# os.chdir(os.getcwd())
 	# rsa300 = cdll.LoadLibrary("RSA_API.dll")
@@ -1701,8 +1701,8 @@ def find_direction(rsa300,freq):
 	specSet.traceLength = c_int(801)
 	# specSet.window =
 	specSet.verticalUnit = c_int(4)
-	specSet.actualStartFreq = c_double(freq-0.3e6)
-	specSet.actualStopFreq = c_double(freq+0.3e6)
+	specSet.actualStartFreq = c_double(freq-span/2)
+	specSet.actualStopFreq = c_double(freq+span>2)
 	# specSet.actualFreqStepSize =c_double(50000.0)
 	# specSet.actualRBW =
 	# specSet.actualVBW =
@@ -1754,7 +1754,7 @@ def find_direction(rsa300,freq):
 	peakPower = np.amax(trace)
 	peakPowerFreq = freq[np.argmax(trace)]
 	# print('Peak power in spectrum: %4.3f dBmV @ %d Hz' % (peakPower, peakPowerFreq))
-	return peakPower
+	return peakPower,freq,trace
 
 #################################################
 ####地图功能模块
