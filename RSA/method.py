@@ -650,12 +650,12 @@ def spectrum1(rsa300,average, startFreq, stopFreq, span, rbw,vbw, str_time, coun
 	peakNum=[]  #记录峰值对应的横坐标
 	# 得到局部数据
 	for i in range(801):
-		if traceData[i] > average + 6:
+		if traceData[i] > average + 8:
 			a.append(i)
 			c.append(trace[i])
 			freq_list.append(freq[i])
 			#print (a)
-		elif traceData[i]<average + 4:
+		elif traceData[i]<average + 6:
 			if a:
 				#print (a)
 				b.append(a)
@@ -1694,7 +1694,7 @@ def find_direction(rsa300,freq,span):
 	# configure desired spectrum settings
 	# some fields are left blank because the default
 	# values set by SPECTRUM_SetDefault() are acceptable
-	specSet.span = c_double(1e6)
+	specSet.span = c_double(span)
 	specSet.rbw = c_double(300e3)
 	# specSet.enableVBW =
 	# specSet.vbw =
@@ -1702,7 +1702,7 @@ def find_direction(rsa300,freq,span):
 	# specSet.window =
 	specSet.verticalUnit = c_int(4)
 	specSet.actualStartFreq = c_double(freq-span/2)
-	specSet.actualStopFreq = c_double(freq+span>2)
+	specSet.actualStopFreq = c_double(freq+span/2)
 	# specSet.actualFreqStepSize =c_double(50000.0)
 	# specSet.actualRBW =
 	# specSet.actualVBW =
@@ -1746,9 +1746,12 @@ def find_direction(rsa300,freq,span):
 	rsa300.SPECTRUM_GetTrace(c_int(0), specSet.traceLength,
 							 byref(traceData), byref(outTracePoints))
 	print('Got trace data.')
+	
 
 	# convert trace data from a ctypes array to a numpy array
 	trace = np.ctypeslib.as_array(traceData)
+	print (len(trace))
+	print (len(freq))
 
 	# Peak power and frequency calculations
 	peakPower = np.amax(trace)

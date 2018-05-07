@@ -2162,7 +2162,7 @@ class MyPanel1_3 ( wx.Panel ):
 		
 		self.SetSizer( bSizer37 )
 
-		
+
 		
 ###########################################################################
 ## Class MyPanel2 台站检测模块（已去掉）
@@ -3431,7 +3431,9 @@ class MyPanel4 ( wx.Panel ):
 			angel=self.get_direction()
 			#angel = 100
 			#print (angel)
-			if angel==-1:
+			if angel==-2:
+				pass   # 连接错误直接终止
+			elif angel==-1:
 				wx.MessageBox('获取方向失败  .', "Error" ,wx.OK | wx.ICON_ERROR)
 			else:
 				input_detail = self.getInput()
@@ -3583,43 +3585,48 @@ class MyPanel4 ( wx.Panel ):
 		direction=-1  #-1表示未成功获取方向 
 		#自动检测占用端口号
 		port_list = list(serial.tools.list_ports.comports())
+		current_port = 0
 		for i in range(len(port_list)):
 			port_list_i=list(port_list[i])
 			if port_list_i[1][0:17]=='USB-SERIAL CH341A':
 				current_port=port_list_i[0]
 				break;
-		print (current_port)
-		try: 
-			ser = serial.Serial(current_port, 115200) 
-		except Exception as e: 
-			print ('open serial failed.')
-			return direction
-		print ('A Serial Echo Is Running...')
-		iscommon=1
-		data=[]
+		if current_port:
+			print (current_port)
+			try: 
+				ser = serial.Serial(current_port, 115200) 
+			except Exception as e: 
+				print ('open serial failed.')
+				return direction
+			print ('A Serial Echo Is Running...')
+			iscommon=1
+			data=[]
 
-		while iscommon: 
-			# echo 
-			s = ser.read(1)    
-			if s==b'\xa1':
-				s = ser.read(1)
-				data.append(s)
-				s=ser.read(1)
-				data.append(s)
-				iscommon=0
-		print (data)
-		dir1=list(data[0])
-		dir2=list(data[1])
+			while iscommon: 
+				# echo 
+				s = ser.read(1)    
+				if s==b'\xa1':
+					s = ser.read(1)
+					data.append(s)
+					s=ser.read(1)
+					data.append(s)
+					iscommon=0
+			print (data)
+			dir1=list(data[0])
+			dir2=list(data[1])
 
-		temp=dir1[0]
-		temp <<= 8
-		temp |= dir2[0]
-		if (temp & 32768):
-			temp=0-(temp&0x7ffff);
+			temp=dir1[0]
+			temp <<= 8
+			temp |= dir2[0]
+			if (temp & 32768):
+				temp=0-(temp&0x7ffff);
+			else:
+				temp =temp&0x7ffff
+			yaw=float(temp/10)
+			return yaw
 		else:
-			temp =temp&0x7ffff
-		yaw=float(temp/10)
-		return yaw
+			wx.MessageBox('测向模块未连接.', "Error",wx.OK | wx.ICON_ERROR)
+			return -2
 
 ###########################################################################
 ## Class MyPanel5_old
