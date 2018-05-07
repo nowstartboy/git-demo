@@ -1597,8 +1597,8 @@ def importData_cu(task_name,file_name,raw_path):#task_name就是文件夹的名�
     #num = int(len(df_cu)/801)
     #x_mat = np.array(df_cu['frequency']).reshape(num,801)
     #y_mat = np.array(df_cu['power']).reshape(num, 801)
-    x_mat = np.array(columns[3:])
-    y_mat = np.array(df_cu[columns[3:]].values)
+    x_mat = np.array(columns[3:],np.float64)
+    y_mat = np.array(df_cu[columns[3:]].values,np.float64)
     return start_freq_cu,end_freq_cu,x_mat,y_mat,start_time_cu,end_time_cu
 
 # 细扫描，返回某一次细扫描的起始频率，终止频率，带宽，中心频率，频率数据，功率数据
@@ -1648,7 +1648,7 @@ def importData_uav(file_name,raw_path):
     # plt.show()
 
 # 测向输入就是一个频率输出就是对应的强度
-def find_direction(rsa300,freq,span):
+def find_direction(rsa300,freq,span,reflevel):
 
 	# os.chdir(os.getcwd())
 	# rsa300 = cdll.LoadLibrary("RSA_API.dll")
@@ -1677,7 +1677,7 @@ def find_direction(rsa300,freq,span):
 	numFound = c_int(0)
 	enable = c_bool(True)  # spectrum enable
 	cf = c_double(freq)  # center freq
-	refLevel = c_double(0)  # ref level
+	refLevel = c_double(reflevel)  # ref level
 	ready = c_bool(False)  # ready
 	timeoutMsec = c_int(500)  # timeout
 	trace = c_int(0)  # select Trace 1

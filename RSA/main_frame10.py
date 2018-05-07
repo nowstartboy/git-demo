@@ -530,6 +530,7 @@ class WorkerThread3(threading.Thread):     #画导入信号动态图
 		self._running = False
 
 	def run(self):#运行一个线程
+		print (type(self.x_data))
 		global lines
 		global txts
 		[m,n]=self.y_data.shape
@@ -539,13 +540,15 @@ class WorkerThread3(threading.Thread):     #画导入信号动态图
 			panel=1;
 		else:
 			panel=0
+		# for i in range(len(lines)):
+			# if lines[i][0]:
+				# lines[i][0].remove()
+		# for j in range(len(txts)):
+			# if txts[j]:
+				# txts[j].remove()
+		# lines=[]
+		# txts=[]
 		while self._running and num<m:
-				for i in range(len(lines)):
-					lines[i][0].remove()
-				for j in range(len(txts)):
-					txts[j].remove()
-				lines=[]
-				txts=[]
 				if panel==1:
 					self.window.panelOne_one.traceData=self.y_data[num,:]
 					self.window.panelOne_one.axes_score.set_xlim(self.start_freq,self.end_freq)
@@ -555,7 +558,7 @@ class WorkerThread3(threading.Thread):     #画导入信号动态图
 				else:
 					self.window.panelOne_two.traceData=self.y_data[num,:]
 					self.window.panelOne_two.axes_score.set_xlim(self.start_freq,self.end_freq)
-					self.window.panelOne_two.l_user.set_data(self.x_data,self.y_data[num,:])
+					self.window.panelOne_two.l_user.set_data(list(self.x_data),list(self.y_data[num,:]))
 					self.window.panelOne_two.axes_score.draw_artist(self.window.panelOne_two.l_user)
 					self.window.panelOne_two.canvas.draw()
 				self.timeToQuit.wait((self.continue_time/m))
@@ -2922,7 +2925,7 @@ class MyPanel3 ( wx.Panel ):
 				sql1 = "select count1 from SPECTRUM_IDENTIFIED where Task_Name='%s' && FREQ_CF between %f and %f "%(task_name, float(start_f), float(stop_f))+"&& Start_time between DATE_FORMAT('%s',"%(start_time)+"'%Y-%m-%d %H:%i:%S')"+"and DATE_FORMAT('%s'," % (stop_time)+"'%Y-%m-%d %H:%i:%S')"
 				a = pandas.read_sql(sql1, con)
 				a = a.drop_duplicates()  # 去电重复项
-				channel_occupied1 = len(a) / float(b['COUNT']*roid)
+				channel_occupied1 = len(a) / float(b['COUNT'])
 				channel_occupied.append(channel_occupied1*100)
 
 
@@ -2996,7 +2999,8 @@ class MyPanel3 ( wx.Panel ):
 		peak=max(occ1)
 		peak_index=argmax(occ1)
 		above_index=[i for i in range(len(occ1)) if occ1[i]>=1]
-		label=[str(starttime+datetime.timedelta(seconds=slot2*i))[0:19]+' '+str(occ1[i])[0:4]+'%' for i in above_index];
+		#label=[str(starttime+datetime.timedelta(seconds=slot2*i))[0:19]+' '+str(occ1[i])[0:4]+'%' for i in above_index];
+		label=[str(occ1[i])[0:4]+'%' for i in above_index];
 		#axes_score.plot(axis_x,occ1)
 		step=1
 		peak_occ=argmax(occ1)
@@ -3005,7 +3009,10 @@ class MyPanel3 ( wx.Panel ):
 		for i in range(len(above_index)):
 			axes_score.plot(above_index[i],occ1[above_index[i]],'ro')
 			axes_score.get_children()[above_index[i]].set_color('r')
-			txt=axes_score.text(above_index[i]-1,occ1[above_index[i]],'%s'%label[i],fontsize=7,color='r')
+			#txt=axes_score.text(above_index[i]-1,occ1[above_index[i]],'%s'%label[i],fontsize=7,color='r')
+		labelpeak = str(starttime+datetime.timedelta(seconds=slot2*peak_index))[0:19]+' '+'%.2f'%peak+'%'
+		print (peak_index,labelpeak)
+		txt = axes_score.text(peak_index-1,peak,labelpeak,fontsize=7,color='k')
 		#print (occ1)
 		return figure_score,axes_score
 		
@@ -3439,7 +3446,7 @@ class MyPanel4 ( wx.Panel ):
 				input_detail = self.getInput()
 				print (input_detail)
 				if self.input_state == 1:
-					peakPower,self.freq,self.traceData=method.find_direction(rsa_true,input_detail[0],input_detail[1])
+					peakPower,self.freq,self.traceData=method.find_direction(rsa_true,input_detail[0],input_detail[1],input_detail[2])
 					print (self.traceData[0])
 					print (self.freq[0],self.freq[-1])
 					#####################将信号峰值显示到表格中
