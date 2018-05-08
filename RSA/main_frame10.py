@@ -14,6 +14,7 @@ from numpy import cos
 from numpy import sin
 from numpy import linspace
 from numpy import argmax
+from numpy import float64
 import json
 from matplotlib.backends.backend_wxagg import FigureCanvasWxAgg as FigureCanvas
 from matplotlib.figure import Figure
@@ -181,6 +182,7 @@ class WorkerThread(threading.Thread):     #画实时监测信号动态图
 		Sub_peak_all=[]
 		Sub_Spectrum_freq=[]
 		Sub_Spectrum_trace=[]
+		Sub_Spectrum_time=[]
 		load_time=time_ref
 		load_time_pre=start_time
 		num_signal=0     #种类信号标号
@@ -209,6 +211,7 @@ class WorkerThread(threading.Thread):     #画实时监测信号动态图
 						#保存列表里每一行数据的来源数据段
 						Sub_Spectrum_freq.append(Sub_Spectrum1)
 						Sub_Spectrum_trace.append(Sub_Spectrum2)
+						Sub_Spectrum_time.append(str_tt1)
 						#将数据信息插入列表
 						panelOne1.list_ctrl.InsertItem(i,str(i+1))
 						panelOne1.list_ctrl.SetItem(i,1,str(Sub_cf[i]/1e6))
@@ -232,6 +235,7 @@ class WorkerThread(threading.Thread):     #画实时监测信号动态图
 							#与之前的信号都不重复,记录频段信号来源
 							Sub_Spectrum_freq.append(Sub_Spectrum1)
 							Sub_Spectrum_trace.append(Sub_Spectrum2)
+							Sub_Spectrum_time.append(str_tt1)
 							#直接在列表中加入该信号
 							Sub_cf_all.append(Sub_cf[cf_i])
 							Sub_cf_length += 1
@@ -254,8 +258,9 @@ class WorkerThread(threading.Thread):     #画实时监测信号动态图
 								panelOne1.list_ctrl.SetItem(divide_no,3,str(Sub_peak[cf_i]))
 								Sub_Spectrum_freq[divide_no]=Sub_Spectrum1
 								Sub_Spectrum_trace[divide_no]=Sub_Spectrum2
+								Sub_Spectrum_time[divide_no]=str_tt1
 
-
+			
 			#输出到底有多少信号
 			if count % 100==0:
 				print (count)
@@ -326,7 +331,15 @@ class WorkerThread(threading.Thread):     #画实时监测信号动态图
 				load_time_pre = time_now
 				trace2=[]
 				
-				
+		#保存最大的数据段到csv文件里
+		Max_spectrum = [str_tt1]
+		Max_Spectrum_trace = [[Sub_Spectrum_time[i]]+[longitude_set,latitude_set]+list(Sub_Spectrum_trace[i]) for i in range(len(Sub_Spectrum_trace))]
+		array_spectrum = array(Max_Spectrum_trace)
+		for i in range(1,len(Max_Spectrum_trace[0])):
+			spectrum_i = array(array_spectrum[:,i],float64)
+			Max_spectrum.append(max(spectrum_i))
+		Max_Spectrum_trace.append(Max_spectrum)
+		
 		#保存数据段
 		panelOne1.Sub_freq=Sub_Spectrum_freq
 		panelOne1.Sub_Spectrum=Sub_Spectrum_trace
@@ -338,12 +351,21 @@ class WorkerThread(threading.Thread):     #画实时监测信号动态图
 		file_path=os.getcwd()+"\\data1\\%s\\"%(str_time+'--'+str_time1 + ("spectrum%d" % t))
 		if not os.path.exists(file_path):
 			os.mkdir(file_path)
+		#存入原始扫描数据，文件名设置
 		path = os.getcwd()+"\\data1\\%s\\"%(str_time+'--'+str_time1 + ("spectrum%d" % t)) + (str_time+'--'+str_time1) + "spectrum%ds.csv" % t  # 频谱数据粗扫描数据存储路径
 		trace = DataFrame(trace1,index=range(len(trace1)),columns=head)
 		trace.to_csv(
 			path,
 			index=False
 		)
+		#存入最大信号扫描信号，文件名设置
+		path2 = os.getcwd()+"\\data1\\%s\\"%(str_time+'--'+str_time1 + ("spectrum%d" % t)) + (str_time+'--'+str_time1) + "Max_spectrum%ds.csv" % t  # 频谱数据粗扫描数据存储路径
+		traceMax = DataFrame(Max_Spectrum_trace,index=range(len(Max_Spectrum_trace)),columns=head)
+		traceMax.to_csv(
+			path2,
+			index=False
+		)
+		
 		s_c = method.spectrum_occ(start_time, str_time1, str_time, startFreq.value, stopFreq.value)
 		# 数据库构建
 		con=mdb.connect(mysql_config['host'],mysql_config['user'],mysql_config['password'],mysql_config['database'])
@@ -533,6 +555,7 @@ class WorkerThread3(threading.Thread):     #画导入信号动态图
 		print (type(self.x_data))
 		global lines
 		global txts
+		global has_rect
 		[m,n]=self.y_data.shape
 		num=0
 		#判断是自由检测还是月报检测
@@ -548,6 +571,14 @@ class WorkerThread3(threading.Thread):     #画导入信号动态图
 				# txts[j].remove()
 		# lines=[]
 		# txts=[]
+		if has_rect:
+			for i in range(len(lines)):
+				lines[i][0].remove()
+			for j in range(len(txts)):
+				txts[j].remove()
+			has_rect = False
+		lines=[]
+		txts=[]
 		while self._running and num<m:
 				if panel==1:
 					self.window.panelOne_one.traceData=self.y_data[num,:]
