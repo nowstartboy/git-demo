@@ -1591,15 +1591,16 @@ def importData_cu(task_name,file_name,raw_path):#task_name就是文件夹的名�
     end_freq_cu = c_cu['endFreq'][0]
     start_time_cu = c_cu['Task_B'][0]
     end_time_cu=c_cu['Task_E'][0]
-    path = raw_path+"//"+file_name+'.csv'
+    path = raw_path+"//"+file_name
     df_cu = pandas.read_csv(path)
     columns=df_cu.columns
     #num = int(len(df_cu)/801)
     #x_mat = np.array(df_cu['frequency']).reshape(num,801)
     #y_mat = np.array(df_cu['power']).reshape(num, 801)
-    x_mat = np.array(columns[3:],np.float64)
-    y_mat = np.array(df_cu[columns[3:]].values,np.float64)
-    return start_freq_cu,end_freq_cu,x_mat,y_mat,start_time_cu,end_time_cu
+    detail_information = np.array(df_cu[columns[:6]].values)
+    x_mat = np.array(columns[6:],np.float64)
+    y_mat = np.array(df_cu[columns[6:]].values,np.float64)
+    return start_freq_cu,end_freq_cu,x_mat,y_mat,start_time_cu,end_time_cu,detail_information
 
 # 细扫描，返回某一次细扫描的起始频率，终止频率，带宽，中心频率，频率数据，功率数据
 def importData_xi(task_name,file_name,raw_path):
