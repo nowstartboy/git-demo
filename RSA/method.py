@@ -1273,6 +1273,7 @@ def uav0(rsa300,startFreq,endFreq,average,rbw,vbw):
 	# 显示无人机实时监测出来的信号频谱中心频点等
 	
 	# 得到局部峰值数据
+	'''
 	a=[]  #有信号频谱时的横坐标编号
 	c=[]  #有信号频谱时的信号强度
 	peakPower=[]
@@ -1291,10 +1292,13 @@ def uav0(rsa300,startFreq,endFreq,average,rbw,vbw):
 				a = []
 				c = []
 	for i in range(len(peakNum)):
-		freq_cf,band=bandwidth2(peakPower[i],peakNum[i],trace,freq)
+		freq_cf,band=bandwidth3(peakPower[i],peakNum[i],trace,freq)
 		freq_cfs.append(freq_cf)
 		bands.append(band)
-
+	'''
+	freq_cfs=0
+	bands=0
+	peakPower=0
 	return freq_cfs, bands, peakPower,freq,traceData
 	
 # 无人机IQ数据
@@ -1600,7 +1604,25 @@ def importData_cu(task_name,file_name,raw_path):#task_name就是文件夹的名�
     detail_information = np.array(df_cu[columns[:6]].values)
     x_mat = np.array(columns[6:],np.float64)
     y_mat = np.array(df_cu[columns[6:]].values,np.float64)
-    return start_freq_cu,end_freq_cu,x_mat,y_mat,start_time_cu,end_time_cu,detail_information
+    #记录每个峰段的坐标信息
+    point_xy = []
+    left_freq = x_mat[0]
+    freq_len = x_mat[-1] - x_mat[0]
+    u_x = 200000
+    u_y = 20
+    [m,n]=y_mat.shape
+    for i in range(m-1):
+        s1_x = detail_information[i][1]-detail_information[i][3]
+        s2_x = detail_information[i][1]+detail_information[i][3]
+        s1_y = detail_information[i][2]
+        point_x1=540*(s1_x-u_x-left_freq)/freq_len+88
+        point_x2=540*(s2_x+u_x-left_freq)/freq_len+88
+        point_y1=308*(-s1_y+10)/80+48
+        point_y2=308*(-s1_y)/80+48
+        point_xy.append([point_x1,point_x2,point_y2,point_y1])
+    print (point_xy)
+    label_information=[str(detail_information[u][0])+'\n'+'cf:'+'%.2f'%(detail_information[u][1]/1e6)+'MHz\n'+'peak:'+'%.2f'%(detail_information[u][2])+'dBmV\n'+'band:'+'%.3f'%(detail_information[u][3]/1e6)+'MHz' for u in range(m-1)]
+    return start_freq_cu,end_freq_cu,x_mat,y_mat,start_time_cu,end_time_cu,detail_information,point_xy,label_information
 
 # 细扫描，返回某一次细扫描的起始频率，终止频率，带宽，中心频率，频率数据，功率数据
 def importData_xi(task_name,file_name,raw_path):
