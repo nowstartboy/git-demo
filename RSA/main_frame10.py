@@ -2,6 +2,7 @@ import wx
 import wx.xrc
 import wx.grid
 import wx.lib.buttons as buttons
+from wx import adv
 import os
 import numpy.core._methods
 import numpy.lib.format
@@ -30,6 +31,7 @@ from pandas import DataFrame,concat
 import datetime
 import time
 import pymysql as mdb
+import cx_Oracle   #导入oracle
 import threading
 import wx.html2
 from queue import Queue
@@ -44,10 +46,11 @@ import winreg
 # with open(os.getcwd()+'\\wxpython.json','r') as data:
     # config_data = json.load(data)
 
-config_data=method.read_config()
-direction_cache=method.read_direction_cache()
-mysql_config=method.read_mysql_config()
-reflect_inf=method.read_reflect_inf()
+method = method.method1()
+config_data=method.config_data
+direction_cache=method.direction_cache
+mysql_config=method.mysql_config
+reflect_inf=method.reflect_inf
 span=config_data['start_freq']-config_data['end_freq']
 rsa_true=0
 deviceSerial_true=0
@@ -64,6 +67,11 @@ height=-1  #高度
 GPS_end=False
 has_rect = False #坐标轴中是否有标注框
 has_txt = False  #坐标轴中是否有标注字
+
+#oracle链接
+conn_str1 = method.conn_str1
+conn_str2 = method.conn_str2
+print (conn_str1)
 
 lines=[]  #记录检测信号提示框
 txts=[]
@@ -336,7 +344,7 @@ class WorkerThread(threading.Thread):     #画实时监测信号动态图
 			trace1.append(data1)
 			trace2.append(data1[3:])
 			
-			if time.time()-load_time>34 and not work_state:
+			if time.time()-load_time>35 and not work_state:
 				trace2 = array(trace2)
 				time_now=str(datetime.datetime.now().strftime('%F %H:%M:%S')) # 总表的起始时间
 				print (1)
@@ -390,16 +398,18 @@ class WorkerThread(threading.Thread):     #画实时监测信号动态图
 		
 		s_c = method.spectrum_occ(start_time, str_time1, str_time, startFreq.value, stopFreq.value)
 		# 数据库构建
-		con=mdb.connect(mysql_config['host'],mysql_config['user'],mysql_config['password'],mysql_config['database'])
+		#con=mdb.connect(mysql_config['host'],mysql_config['user'],mysql_config['password'],mysql_config['database'])
+		con = cx_Oracle.Connection(conn_str1)  
 		#con = mdb.connect('localhost', 'root', 'cdk120803', 'ceshi1')
 		with con:
 			# 获取连接的cursor，只有获取了cursor，我们才能进行各种操作
 			cur = con.cursor()  # 一条游标操作就是一条数据插入，第二条游标操作就是第二条记录，所以最好一次性插入或者日后更新也行
 			#print ([str_time, start_time, str_time1, float(t), float(s_c), path, deviceSerial, anteid, count])
-			cur.execute("INSERT INTO Minitor_Task VALUES(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)",[str_time, start_time, str_time1, float(t), float(s_c), path, deviceSerial, anteid, count,float(startFreq.value), float(stopFreq.value),float(longitude_set),float(latitude_set)])
+			cur.execute("INSERT INTO Minitor_Task VALUES('%s',to_date('%s','yyyy-MM-dd hh24:mi:ss'),to_date('%s','yyyy-MM-dd hh24:mi:ss'),%s,%s,'%s','%s','%s',%s,%s,%s,%s,%s)"%(str_time, start_time, str_time1, float(t), float(s_c), path, deviceSerial, anteid, count,float(startFreq.value), float(stopFreq.value),float(longitude_set),float(latitude_set)))
 			cur.close()
 		con.commit()
 		con.close()
+		print ('insert2 success')
 		
 		
 		#######################################
@@ -1490,7 +1500,7 @@ class MyPanel1_1 ( wx.Panel ):
 		self.freq=range(int(start_freq),int(end_freq)+int((end_freq-start_freq)/800),int((end_freq-start_freq)/800))
 		self.l_user,=self.axes_score.plot(self.freq, self.traceData, 'y')
 		#self.axes_score.axhline(y=average, color='r')
-		self.axes_score.set_ylim(-50,20)
+		self.axes_score.set_ylim(-80,0)
 		self.axes_score.set_title('Spectrum')
 		self.axes_score.grid(True,color='w')
 		self.axes_score.set_xlabel('Frequency/Hz')
@@ -1695,9 +1705,7 @@ class MyPanel1_1 ( wx.Panel ):
 							t1=WorkerThread(self.count,self,rsa_true,deviceSerial_true,span,t,anteid,start_freq,end_freq,rbw,vbw)
 							self.threads.append(t1)
 							t1.start()
-
 							print ('success')
-
 				else:
 					wx.MessageBox(u'已处于监测状态，请先停止当前任务，然后开始新的任务', "Message" ,wx.OK | wx.ICON_INFORMATION)
 
@@ -1816,9 +1824,9 @@ class MyPanel1_2 ( wx.Panel ):
 		# self.textCtrl1 = wx.TextCtrl( self.panel3, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, (80,20), 0 )
 		# two_bSizer13.Add( self.textCtrl1, 0, wx.ALL|wx.ALIGN_CENTRE, 0 )
 		
-		servicedid,freqname,freqrange_list=method.read_service()
+		#servicedid,freqname,freqrange_list=method.servicedid,method.freqname,method.freqrange_list
 		#print ('freqrange_list:',freqrange_list)
-		choice1Choices = freqrange_list
+		choice1Choices = []
 		self.choice1 = wx.Choice( self.panel3, wx.ID_ANY, wx.DefaultPosition, (145,20), choice1Choices, 0 )
 		self.choice1.SetSelection( 0 )
 		two_bSizer13.Add( self.choice1, 0, wx.ALL|wx.ALIGN_CENTRE, 2 )
@@ -3042,13 +3050,14 @@ class MyPanel3 ( wx.Panel ):
 		step = float(freq_stop - freq_start) / 20
 		self.m_textCtrl37.SetValue(str(step/1e6)+' MHz')
 		sql2 = "select COUNT,Task_L from minitor_task where Task_Name='%s'" % (task_name)
-		con=mdb.connect(mysql_config['host'],mysql_config['user'],mysql_config['password'],mysql_config['database'])
+		#con=mdb.connect(mysql_config['host'],mysql_config['user'],mysql_config['password'],mysql_config['database'])
+		con = cx_Oracle.Connection(conn_str1) 
 		#con = mdb.connect('localhost', 'root', 'cdk120803', 'ceshi1')
 		b = pandas.read_sql(sql2, con)
 		# print ('#################')
 		# print (task_name)
 		# print (b)
-		retain_time = float(b['Task_L'])
+		retain_time = float(b['TASK_L'])
 		l = (stop_time - start_time).seconds
 		roid = l/retain_time
 		#print (roid)
@@ -3065,7 +3074,7 @@ class MyPanel3 ( wx.Panel ):
 			for i in range(20):
 				start_f = freq_start + i * step
 				stop_f = freq_start + (i + 1) * step
-				sql1 = "select count1 from SPECTRUM_IDENTIFIED where Task_Name='%s' && FREQ_CF between %f and %f "%(task_name, float(start_f), float(stop_f))+"&& Start_time between DATE_FORMAT('%s',"%(start_time)+"'%Y-%m-%d %H:%i:%S')"+"and DATE_FORMAT('%s'," % (stop_time)+"'%Y-%m-%d %H:%i:%S')"
+				sql1 = "select count1 from SPECTRUM_IDENTIFIED where Task_Name='%s' and FREQ_CF between %f and %f "%(task_name, float(start_f), float(stop_f))+"and Start_time between to_date('%s',"%(start_time)+ "'yyyy-MM-dd hh24:mi:ss')"+"and to_date('%s'," % (stop_time)+ "'yyyy-MM-dd hh24:mi:ss')"
 				a = pandas.read_sql(sql1, con)
 				a = a.drop_duplicates()  # 去电重复项
 				channel_occupied1 = len(a) / float(b['COUNT'])
@@ -3117,6 +3126,8 @@ class MyPanel3 ( wx.Panel ):
 		for i in range(divide):
 			s_t = starttime + datetime.timedelta(seconds = (i*slot2))
 			e_t = starttime + datetime.timedelta(seconds = ((i+1)*slot2))
+			s_t = str(s_t)[0:19]
+			e_t = str(e_t)[0:19]
 			occ1_1 = self.spectrum_occ(s_t,e_t,task_name,freq_start,freq_stop)
 			occ1.append(occ1_1)
 		#print('occ1',occ1)
@@ -3164,14 +3175,15 @@ class MyPanel3 ( wx.Panel ):
 		spectrum_span = freq_stop - freq_start
 		# 以一个小时为单位
 		#print (task_name,freq_start,freq_stop)
-		sql3 = "select FreQ_BW, COUNT1 from SPECTRUM_IDENTIFIED where Task_Name='%s' && FREQ_CF between %f and %f" % (task_name, float(freq_start), float(freq_stop)) + "&& Start_time between DATE_FORMAT('%s'," % (start_time) + "'%Y-%m-%d %H:%i:%S')" + "and DATE_FORMAT('%s'," % (stop_time) + "'%Y-%m-%d %H:%i:%S')"
-		con=mdb.connect(mysql_config['host'],mysql_config['user'],mysql_config['password'],mysql_config['database'])
+		sql3 = "select FreQ_BW, COUNT1 from SPECTRUM_IDENTIFIED where Task_Name='%s' and FREQ_CF between %f and %f" % (task_name, float(freq_start), float(freq_stop)) + "and Start_time between to_date('%s'," % (start_time) +"'yyyy-MM-dd hh24:mi:ss')" + "and to_date('%s'," % (stop_time) +"'yyyy-MM-dd hh24:mi:ss')"
+		#con=mdb.connect(mysql_config['host'],mysql_config['user'],mysql_config['password'],mysql_config['database'])
+		con = cx_Oracle.Connection(conn_str1) 
 		#con = mdb.connect('localhost', 'root', 'cdk120803', 'ceshi1')
 		c = pandas.read_sql(sql3, con)
 		#print (c)
 		con.commit()
 		con.close()
-		spectrum_occ1 = sum(c['FreQ_BW'])
+		spectrum_occ1 = sum(c['FREQ_BW'])
 		if len(c['COUNT1'])>0:
 			c1 = array(c['COUNT1'])
 			num = max(c['COUNT1']) - min(c['COUNT1'])+1
@@ -5614,6 +5626,9 @@ class MyFrame1 ( wx.Frame ):
 				rsa_true=self.rsa
 				deviceSerial_true=self.message[1]
 				connect_state=1
+				servicedid,freqname,freqrange_list = method.read_service(method.conn_str2)
+				self.panelOne.panelOne_two.choice1.SetItems(freqrange_list)
+				self.panelOne.panelOne_two.choice1.SetSelection(0)
 		except Exception as e:
 			wx.MessageBox(str(e), "Message" ,wx.OK | wx.ICON_INFORMATION)
 		
@@ -5816,11 +5831,25 @@ class MyFrame1 ( wx.Frame ):
 		self.Refresh()
 		event.Skip()
 
+class PaintApp(wx.App):  
+    def OnInit(self):  
+        bmp = wx.Image("SOAR.bmp").ConvertToBitmap()  
+        adv.SplashScreen(bmp,  
+                        adv.SPLASH_CENTER_ON_SCREEN | adv.SPLASH_TIMEOUT,  
+                        1500,  
+                        None,  
+                        -1)  
+        wx.Yield()  
+        win = MyFrame1(None)
+        win.Show()
+        self.SetTopWindow(win)  
+        return True  
+
 def main():
-	app = wx.App()
-	#win = MainFrame()
-	win = MyFrame1(None)
-	win.Show()
+	
+	app = PaintApp()
+	# win = MyFrame1(None)
+	# win.Show()
 	app.MainLoop()
 
 if __name__ == "__main__":
