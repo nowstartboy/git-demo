@@ -205,6 +205,12 @@ class WorkerThread(threading.Thread):     #画实时监测信号动态图
 		lines = panelOne1.lines
 		txts = panelOne1.txts
 		print ('work_state:',work_state)
+		#测试数据库的使用
+		try:
+			method.test_oracle_connection()
+			print ('oracle_sucess')
+		except:
+			wx.MessageBox(u' 数据库连接不成功', "Message" ,wx.OK | wx.ICON_INFORMATION)
 		while time.time() - time_ref < t and self._running:
 			average = method.detectNoise(self.rsa_true,self.start_freq,self.end_freq,self.rbw,self.vbw)
 			#print ('#'*20)
@@ -626,6 +632,12 @@ class WorkerThread3(threading.Thread):     #画导入信号动态图
 			has_txt = False
 		self.window.lines=[]
 		self.window.txts=[]
+		#测试数据库的使用
+		try:
+			method.test_oracle_connection()
+			print ('oracle_sucess')
+		except:
+			wx.MessageBox(u' 数据库连接不成功', "Message" ,wx.OK | wx.ICON_INFORMATION)
 		while self._running and num<m:
 			if panel==1:
 				self.window.panelOne_one.traceData=self.y_data[num,:]
@@ -1582,8 +1594,7 @@ class MyPanel1_1 ( wx.Panel ):
 							# panelOne1.m_textCtrl4.SetValue(str(a.location[0])[0:6])
 							# panelOne1.m_textCtrl5.SetValue(str(a.location[1])[0:6])
 							# panelOne1.m_textCtrl6.SetValue(str(a.location[2])[0:6]+' m')
-
-							#event.GetEventObject().SetLabel(u"停止检测")
+							# method.freq_info = method.get_freq_range(a.location,method.threshold)
 							
 							##########################################################自定义监测
 							# read start_freq
@@ -2080,6 +2091,7 @@ class MyPanel1_2 ( wx.Panel ):
 							# panelOne1.m_textCtrl4.SetValue(str(a.location[0])[0:6])
 							# panelOne1.m_textCtrl5.SetValue(str(a.location[1])[0:6])
 							# panelOne1.m_textCtrl6.SetValue(str(a.location[2])[0:6]+' m')
+							# method.freq_info = method.get_freq_range(a.location,method.threshold)
 
 							
 							###################################################月报监测
@@ -2102,7 +2114,7 @@ class MyPanel1_2 ( wx.Panel ):
 								step_size=step_size/(10**3)
 							else:
 								step_size=step_size/(10**6)
-							self.textCtrl2.SetValue(str(step_size))
+							self.textCtrl2.SetValue("%.3f"%step_size)
 							#read Antenna_number
 							anteid=config_data['Antenna_number']
 							
@@ -2783,7 +2795,7 @@ class MyPanel8 ( wx.Panel ):
 '''
 ###########################################################################
 ## Class MyPanel3
-###########################################################################
+###########################################################################	
 
 class MyPanel3 ( wx.Panel ):
 	
@@ -3022,6 +3034,12 @@ class MyPanel3 ( wx.Panel ):
 		self.m_staticText126.SetLabel(str(self.initial_freq4/1e6)+'MHz')
 		
 	def start_channel_occ(self,event):
+		#测试数据库的使用
+		try:
+			method.test_oracle_connection()
+			print ('oracle_sucess')
+		except:
+			wx.MessageBox(u' 数据库连接不成功', "Message" ,wx.OK | wx.ICON_INFORMATION)
 		if self.start_time!=0:
 			if self.end_time!=0:
 				if self.initial_time1>self.initial_time2:
@@ -3034,6 +3052,12 @@ class MyPanel3 ( wx.Panel ):
 				self.m_panel8.Refresh()
 	
 	def start_spectrum_occ(self,event):
+		#测试数据库的使用
+		try:
+			method.test_oracle_connection()
+			print ('oracle_sucess')
+		except:
+			wx.MessageBox(u' 数据库连接不成功', "Message" ,wx.OK | wx.ICON_INFORMATION)
 		if self.start_time!=0:
 			if self.end_time!=0:
 				if self.initial_time1>self.initial_time2:
@@ -3202,48 +3226,6 @@ class MyPanel4 ( wx.Panel ):
 	
 	def __init__( self, parent ):
 		wx.Panel.__init__ ( self, parent, id = wx.ID_ANY, pos = wx.DefaultPosition, size = wx.Size( 602,300 ), style = wx.TAB_TRAVERSAL )
-		'''
-		# bSizer86 = wx.BoxSizer( wx.VERTICAL )
-		# bSizer87 = wx.BoxSizer( wx.HORIZONTAL )
-		
-		# bSizer88 = wx.BoxSizer( wx.HORIZONTAL )
-		# self.m_staticText41 = wx.StaticText( self, wx.ID_ANY, u" 测向频率：", wx.DefaultPosition, wx.DefaultSize, 0 )
-		# self.m_staticText41.Wrap( -1 )
-		# bSizer88.Add( self.m_staticText41, 0, wx.ALL|wx.ALIGN_CENTRE, 5 )
-		# self.m_textCtrl13 = wx.TextCtrl( self, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize, 0 )
-		# bSizer88.Add( self.m_textCtrl13, 0, wx.ALL|wx.ALIGN_CENTRE, 5 )
-		# self.m_staticText42 = wx.StaticText( self, wx.ID_ANY, "MHz     ", wx.DefaultPosition, wx.DefaultSize, 0 )
-		# self.m_staticText42.Wrap( -1 )
-		# bSizer88.Add( self.m_staticText42, 0, wx.ALL|wx.ALIGN_CENTRE, 5 )
-		# self.m_button16 = wx.Button( self, wx.ID_ANY, u"开始测向", wx.DefaultPosition, wx.DefaultSize, 0 )
-		# self.m_button16.Bind(wx.EVT_BUTTON,self.Angel)
-		# bSizer88.Add( self.m_button16, 0, wx.ALL|wx.ALIGN_CENTRE, 5 )
-		# bSizer87.Add( bSizer88, 1, wx.EXPAND |wx.ALL, 0 )
-		
-		# self.m_staticline14 = wx.StaticLine( self, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.LI_VERTICAL )
-		# bSizer87.Add( self.m_staticline14, 0, wx.EXPAND |wx.ALL, 1 )
-		
-		# bSizer89 = wx.BoxSizer( wx.HORIZONTAL )
-		# self.m_staticText44 = wx.StaticText( self, wx.ID_ANY, u"   天线信息 ：", wx.DefaultPosition, wx.DefaultSize, 0 )
-		# self.m_staticText44.Wrap( -1 )
-		# bSizer89.Add( self.m_staticText44, 0, wx.ALL|wx.ALIGN_CENTRE, 5 )
-		# self.m_textCtrl43 = wx.TextCtrl( self, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize, 0 )
-		# bSizer89.Add( self.m_textCtrl43, 0, wx.ALL|wx.ALIGN_CENTRE, 5 )
-		# #加空格
-		# self.m_staticText45 = wx.StaticText( self, wx.ID_ANY, "      ", wx.DefaultPosition, wx.DefaultSize, 0 )
-		# self.m_staticText45.Wrap( -1 )
-		# bSizer89.Add( self.m_staticText45, 0, wx.ALL|wx.ALIGN_CENTRE, 5 )
-		# #bSizer89.AddStretchSpacer(1)
-		# self.m_button17 = wx.Button( self, wx.ID_ANY, u"天线连接", wx.DefaultPosition, wx.DefaultSize, 0 )
-		# bSizer89.Add( self.m_button17, 0, wx.ALL|wx.ALIGN_CENTRE, 5 )
-		# bSizer87.Add( bSizer89, 1, wx.EXPAND |wx.ALL, 0 )
-		
-		# #bSizer88和bSizer89是一对
-		# bSizer86.Add( bSizer87, 1, wx.EXPAND |wx.ALL, 0 )
-		
-		# self.m_staticline13 = wx.StaticLine( self, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.LI_HORIZONTAL )
-		# bSizer86.Add( self.m_staticline13, 0, wx.EXPAND |wx.ALL, 0 )
-		'''
 		bSizer90=wx.BoxSizer(wx.HORIZONTAL)
 		bSizerLeft=wx.BoxSizer(wx.VERTICAL)
 		###############################################放置输入信息框
@@ -3834,131 +3816,7 @@ class MyPanel4 ( wx.Panel ):
 			wx.MessageBox('测向模块未连接.', "Error",wx.OK | wx.ICON_ERROR)
 			return -2
 
-###########################################################################
-## Class MyPanel5_old
-###########################################################################
 
-class MyPanel5_old ( wx.Panel ):
-	
-	def __init__( self, parent ):
-		wx.Panel.__init__ ( self, parent, id = wx.ID_ANY, pos = wx.DefaultPosition, size = wx.Size( 500,300 ), style = wx.TAB_TRAVERSAL )
-		
-		bSizer92 = wx.BoxSizer( wx.VERTICAL )
-		
-		bSizer93 = wx.BoxSizer( wx.HORIZONTAL )
-		
-		bSizer97 = wx.BoxSizer( wx.VERTICAL )
-		
-		bSizer99 = wx.BoxSizer( wx.VERTICAL )
-		
-		m_listBox1Choices = []
-		self.m_listBox1 = wx.ListBox( self, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, m_listBox1Choices, 0 )
-		bSizer99.Add( self.m_listBox1, 0, wx.ALL, 5 )
-		
-		
-		bSizer97.Add( bSizer99, 1, wx.EXPAND, 5 )
-		
-		
-		bSizer93.Add( bSizer97, 1, wx.EXPAND, 5 )
-		
-		# self.m_staticline10 = wx.StaticLine( self, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.LI_VERTICAL )
-		# bSizer93.Add( self.m_staticline5, 0, wx.EXPAND |wx.ALL, 0 )
-		
-		bSizer98 = wx.BoxSizer( wx.VERTICAL )
-		
-		bSizer100 = wx.BoxSizer( wx.VERTICAL )
-		
-		self.m_panel9 = wx.Panel( self, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
-		bSizer100.Add( self.m_panel9, 1, wx.EXPAND |wx.ALL, 5 )
-		
-		#画板上画坐标轴
-		self.figure_score5=method.draw_picture([],[],'UAV-Spectrum',"Frequency/MHz","Amplitude/dBmV",4,6,)
-		FigureCanvas(self.m_panel9, -1, self.figure_score5)
-		
-		
-		bSizer98.Add( bSizer100, 8, wx.EXPAND, 5 )
-		
-		bSizer101 = wx.BoxSizer( wx.VERTICAL )
-		
-		self.m_staticText40 = wx.StaticText( self, wx.ID_ANY, u"MyLabel", wx.DefaultPosition, wx.DefaultSize, 0 )
-		self.m_staticText40.Wrap( -1 )
-		bSizer101.Add( self.m_staticText40, 0, wx.ALL, 5 )
-		
-		
-		bSizer98.Add( bSizer101, 1, wx.EXPAND, 5 )
-		
-		
-		bSizer93.Add( bSizer98, 4, wx.EXPAND, 5 )
-		
-		
-		bSizer92.Add( bSizer93, 5, wx.EXPAND, 5 )
-		
-		self.m_staticline5 = wx.StaticLine( self, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.LI_HORIZONTAL )
-		bSizer92.Add( self.m_staticline5, 0, wx.EXPAND |wx.ALL, 0 )
-		
-		bSizer94 = wx.BoxSizer( wx.HORIZONTAL )
-		
-		bSizer95 = wx.BoxSizer( wx.VERTICAL )
-		
-		m_listBox2Choices = []
-		self.m_listBox2 = wx.ListBox( self, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, m_listBox2Choices, 0 )
-		bSizer95.Add( self.m_listBox2, 0, wx.ALL, 5 )
-		
-		
-		bSizer94.Add( bSizer95, 1, wx.EXPAND, 5 )
-		
-		bSizer96 = wx.BoxSizer( wx.VERTICAL )
-		
-		self.m_grid2 = wx.grid.Grid( self, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, 0 )
-		
-		self.rowLabels = ["uno", "dos", "tres", "quatro", "cinco"]
-		self.colLabels = ["homer", "marge", "bart", "lisa", "maggie"]
-		
-		
-		# Grid
-		self.m_grid2.CreateGrid( 5, 5 )
-		for row in range(5):
-			self.m_grid2.SetRowLabelValue(row, self.rowLabels[row])
-			self.m_grid2.SetColLabelValue(row, self.colLabels[row])
-			for col in range(5):
-				self.m_grid2.SetCellValue(row, col, 
-						  "(%s,%s)" % (self.rowLabels[row], self.colLabels[col]))
-		
-
-		self.m_grid2.EnableEditing( True )
-		self.m_grid2.EnableGridLines( True )
-		self.m_grid2.EnableDragGridSize( True )
-		self.m_grid2.SetMargins( 0, 0 )
-		
-		# Columns
-		self.m_grid2.AutoSizeColumns()
-		self.m_grid2.EnableDragColMove( False )
-		self.m_grid2.EnableDragColSize( True )
-		self.m_grid2.SetColLabelSize( 40 )
-		self.m_grid2.SetColLabelAlignment( wx.ALIGN_CENTRE, wx.ALIGN_CENTRE )
-		
-		# Rows
-		self.m_grid2.AutoSizeRows()
-		self.m_grid2.EnableDragRowSize( True )
-		self.m_grid2.SetRowLabelSize( 60 )
-		self.m_grid2.SetRowLabelAlignment( wx.ALIGN_CENTRE, wx.ALIGN_CENTRE )
-		
-		# Label Appearance
-		
-		# Cell Defaults
-		self.m_grid2.SetDefaultCellAlignment( wx.ALIGN_LEFT, wx.ALIGN_TOP )
-		bSizer96.Add( self.m_grid2, 0, wx.ALL|wx.EXPAND, 5 )
-		
-		
-		bSizer94.Add( bSizer96, 4, wx.EXPAND, 5 )
-		
-		
-		bSizer92.Add( bSizer94, 1, wx.EXPAND, 5 )
-		
-		
-		self.SetSizer( bSizer92 )
-
-		
 ###########################################################################
 ## Class MyPanel5 无人机信号瀑布图
 ###########################################################################
@@ -4711,7 +4569,7 @@ class MyDialog1 ( wx.Dialog ):
 		
 		
 		sbSizer3.Add( bSizer178, 1, wx.EXPAND, 5 )
-		
+		'''
 		bSizer179 = wx.BoxSizer( wx.HORIZONTAL )
 		
 		self.m_staticText82 = wx.StaticText( self, wx.ID_ANY, u"频率步进：", wx.DefaultPosition, wx.DefaultSize, 0 )
@@ -4728,9 +4586,9 @@ class MyDialog1 ( wx.Dialog ):
 		
 		
 		sbSizer3.Add( bSizer179, 1, wx.EXPAND, 5 )
+		'''
 		
-		
-		bSizer169.Add( sbSizer3, 3, wx.EXPAND, 5 )
+		bSizer169.Add( sbSizer3, 2, wx.EXPAND, 5 )
 		
 		
 		self.bx2=wx.StaticBox( self, wx.ID_ANY, u"触发电平:" )
@@ -4833,11 +4691,18 @@ class MyDialog1 ( wx.Dialog ):
 		bSizer187 = wx.BoxSizer( wx.VERTICAL )
 		bSizer188 = wx.BoxSizer( wx.HORIZONTAL )
 		
-		self.m_radioBtn1 = wx.RadioButton( self, wx.ID_ANY, u"connection", wx.DefaultPosition, wx.DefaultSize, style = wx.RB_GROUP )
-		bSizer188.Add( self.m_radioBtn1, 0, wx.ALL, 5 )
+		# self.m_radioBtn1 = wx.RadioButton( self, wx.ID_ANY, u"connection", wx.DefaultPosition, wx.DefaultSize, style = wx.RB_GROUP )
+		# bSizer188.Add( self.m_radioBtn1, 0, wx.ALL, 5 )
 		
-		self.m_radioBtn2 = wx.RadioButton( self, wx.ID_ANY, u"no connection", wx.DefaultPosition, wx.DefaultSize, 0 )
-		bSizer188.Add( self.m_radioBtn2, 0, wx.ALL, 5 )
+		self.m_staticText_interface = wx.StaticText( self, wx.ID_ANY, u"interface :   ", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_staticText_interface.Wrap( -1 )
+		bSizer188.Add( self.m_staticText_interface, 0, wx.ALL, 5 )
+		
+		self.m_textCtrl_interface = wx.TextCtrl( self, wx.ID_ANY, mysql_config['interface'], wx.DefaultPosition, wx.DefaultSize, 0 )
+		bSizer188.Add( self.m_textCtrl_interface, 0, wx.ALL, 5 )
+		
+		# self.m_radioBtn2 = wx.RadioButton( self, wx.ID_ANY, u"no connection", wx.DefaultPosition, wx.DefaultSize, 0 )
+		# bSizer188.Add( self.m_radioBtn2, 0, wx.ALL, 5 )
 		self.Bind(wx.EVT_RADIOBUTTON, self.OnRadiogroup)
 		bSizer187.Add( bSizer188, 1, wx.EXPAND, 5 )
 		
@@ -4849,29 +4714,44 @@ class MyDialog1 ( wx.Dialog ):
 		self.m_textCtrl14 = wx.TextCtrl( self, wx.ID_ANY, mysql_config['host'], wx.DefaultPosition, wx.DefaultSize, 0 )
 		bSizer189.Add( self.m_textCtrl14, 0, wx.ALL, 5 )
 		
-		self.m_staticText88 = wx.StaticText( self, wx.ID_ANY, u"database: ", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_staticText88 = wx.StaticText( self, wx.ID_ANY, u"user1: ", wx.DefaultPosition, wx.DefaultSize, 0 )
 		self.m_staticText88.Wrap( -1 )
 		bSizer189.Add( self.m_staticText88, 0, wx.ALL, 5 )
 		
-		self.m_textCtrl15 = wx.TextCtrl( self, wx.ID_ANY, mysql_config['database'], wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_textCtrl15 = wx.TextCtrl( self, wx.ID_ANY, mysql_config['user1'], wx.DefaultPosition, wx.DefaultSize, 0 )
 		bSizer189.Add( self.m_textCtrl15, 0, wx.ALL, 5 )
+		
+		self.m_staticText102 = wx.StaticText( self, wx.ID_ANY, u"password1: ", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_staticText102.Wrap( -1 )
+		bSizer189.Add( self.m_staticText102, 0, wx.ALL, 5 )
+		
+		self.m_textCtrl18 = wx.TextCtrl( self, wx.ID_ANY, mysql_config['password1'], wx.DefaultPosition, wx.DefaultSize, 0 )
+		bSizer189.Add( self.m_textCtrl18, 0, wx.ALL, 5 )
 		bSizer187.Add( bSizer189, 1, wx.EXPAND, 5 )
 		
 		bSizer190 = wx.BoxSizer( wx.HORIZONTAL )
-		self.m_staticText100 = wx.StaticText( self, wx.ID_ANY, u"user:", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_staticText100 = wx.StaticText( self, wx.ID_ANY, u"SID :", wx.DefaultPosition, wx.DefaultSize, 0 )
 		self.m_staticText100.Wrap( -1 )
 		bSizer190.Add( self.m_staticText100, 0, wx.ALL, 5 )
 		
-		self.m_textCtrl16 = wx.TextCtrl( self, wx.ID_ANY, mysql_config['user'], wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_textCtrl16 = wx.TextCtrl( self, wx.ID_ANY, mysql_config['SID'], wx.DefaultPosition, wx.DefaultSize, 0 )
 		bSizer190.Add( self.m_textCtrl16, 0, wx.ALL, 5 )
 		
-		self.m_staticText101 = wx.StaticText( self, wx.ID_ANY, u"password:", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_staticText101 = wx.StaticText( self, wx.ID_ANY, u"user2: ", wx.DefaultPosition, wx.DefaultSize, 0 )
 		self.m_staticText101.Wrap( -1 )
 		bSizer190.Add( self.m_staticText101, 0, wx.ALL, 5 )
 		
-		self.m_textCtrl17 = wx.TextCtrl( self, wx.ID_ANY, mysql_config['password'], wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_textCtrl17 = wx.TextCtrl( self, wx.ID_ANY, mysql_config['user2'], wx.DefaultPosition, wx.DefaultSize, 0 )
 		bSizer190.Add( self.m_textCtrl17, 0, wx.ALL, 5 )
+		
+		self.m_staticText103 = wx.StaticText( self, wx.ID_ANY, u"password2: ", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_staticText103.Wrap( -1 )
+		bSizer190.Add( self.m_staticText103, 0, wx.ALL, 5 )
+		
+		self.m_textCtrl19 = wx.TextCtrl( self, wx.ID_ANY, mysql_config['password2'], wx.DefaultPosition, wx.DefaultSize, 0 )
+		bSizer190.Add( self.m_textCtrl19, 0, wx.ALL, 5 )
 		bSizer187.Add( bSizer190, 1, wx.EXPAND, 5 )
+		
 		
 		sbSizer7.Add( bSizer187, 1, wx.EXPAND, 5 )
 		bSizer169.Add( sbSizer7, 1, wx.EXPAND, 5 )
@@ -4919,9 +4799,12 @@ class MyDialog1 ( wx.Dialog ):
 	def get_mysql_value(self):
 		mysql_config_data=[]
 		mysql_config_data.append(self.m_textCtrl14.GetValue())  #host
-		mysql_config_data.append(self.m_textCtrl15.GetValue())  #database
-		mysql_config_data.append(self.m_textCtrl16.GetValue())  #user
-		mysql_config_data.append(self.m_textCtrl17.GetValue())  #password
+		mysql_config_data.append(self.m_textCtrl16.GetValue())  #SID
+		mysql_config_data.append(self.m_textCtrl15.GetValue())  #user1
+		mysql_config_data.append(self.m_textCtrl18.GetValue())  #password1
+		mysql_config_data.append(self.m_textCtrl17.GetValue())  #user2
+		mysql_config_data.append(self.m_textCtrl19.GetValue())  #password2
+		mysql_config_data.append(self.m_textCtrl_interface.GetValue())  #interface 1521
 		return mysql_config_data
 	
 	def OnRadiogroup(self,event):
@@ -5276,8 +5159,6 @@ class MyFrame1 ( wx.Frame ):
 		self.timer = wx.Timer(self)#创建定时器
 		self.Bind(wx.EVT_TIMER, self.onTimer,self.timer)  #设置定时事件
 		self.timer.Start(1000)
-		
-		
 	
 	def __del__( self ):
 		pass
@@ -5724,9 +5605,12 @@ class MyFrame1 ( wx.Frame ):
 			##################存数据库参数
 			mysql_value=a.get_mysql_value()
 			mysql_config['host']=mysql_value[0]
-			mysql_config['database']=mysql_value[1]
-			mysql_config['user']=mysql_value[2]
-			mysql_config['password']=mysql_value[3]
+			mysql_config['SID']=mysql_value[1]
+			mysql_config['user1']=mysql_value[2]
+			mysql_config['password1']=mysql_value[3]
+			mysql_config['user2']=mysql_value[4]
+			mysql_config['password2']= mysql_value[5]
+			mysql_config['interface']= mysql_value[6]
 			
 			#存储配置参数
 			jsObj = json.dumps(config_data)

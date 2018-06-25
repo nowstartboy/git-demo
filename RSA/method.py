@@ -26,8 +26,13 @@ class method1:
 		self.direction_cache=self.read_direction_cache()
 		self.reflect_inf=self.read_reflect_inf()
 		self.mysql_config=self.read_mysql_config()
-		self.conn_str1,self.conn_str2 = self.get_oracle_connection()
+		self.conn_str1 = self.mysql_config['user1']+'/'+self.mysql_config['password1']+'@'+self.mysql_config['host']+':'+self.mysql_config['interface']+'/'+self.mysql_config['SID']
+		self.conn_str2 = self.mysql_config['user2']+'/'+self.mysql_config['password2']+'@'+self.mysql_config['host']+':'+self.mysql_config['interface']+'/'+self.mysql_config['SID']
+		print(self.conn_str1,self.conn_str2)
 		print ('reflect_inf:',self.reflect_inf)
+		self.station_info = pandas.read_csv('taizhan.csv')
+		self.freq_info = [[940,950]]
+		self.threshold = 100
 
 	#读取系统默认参数
 	def read_config(self):
@@ -49,6 +54,52 @@ class method1:
 		conn_str1 = 'ceshi1/cdk120803@localhost:1521/SOUJIUSUBDB'
 		conn_str2 = 'A110000_RMDSD/cdk120803@localhost:1521/SOUJIUSUBDB'
 		return conn_str1,conn_str2
+	
+	def test_oracle_connection(self):
+		connection_oracle = cx_Oracle.connect(self.conn_str1)
+		connection_oracle = cx_Oracle.connect(self.conn_str2)
+		return
+	
+	def compute_distance(self,gps1,gps2):
+		R=float(6378137);
+		dx = (gps2[0]*np.pi/180-gps1[0]*np.pi/180)*(R*np.cos(gps1[1]*np.pi/180));
+		dy = (gps2[1]-gps1[1])*np.pi/180*R
+		return np.sqrt(dx*dx+dy*dy)
+	
+	def station_info_update(self):
+		conn_str3 = 'A1400_STATDB/cdk120803@localhost:1521/SOUJIUSUBDB'
+		connection_oracle2 = cx_Oracle.Connection(conn_str3)
+		#读取台站频率，位置信息
+		sql9 = 'select STATION_GUID, FREQ_EFB, FREQ_EFE from RSBT_FREQ'
+		sql10 = 'select GUID,STAT_LG,STAT_LA from RSBT_STATION'
+		#读取台站表数据，台站id,经纬度，然后去除空值
+		station_guid_key = pandas.read_sql(sql10,connection_oracle2)
+		station_guid_key_new = station_guid_key.dropna(axis=0,how='any')
+		print (station_guid_key_new.shape)
+		station_guid_key_new.rename(columns={'GUID':'STATION_GUID'},inplace=True) 
+		#读取频率表数据，体站id,其实频率，终止频率
+		station_guid = pandas.read_sql(sql9,connection_oracle2)
+		station_guid_one = station_guid.drop_duplicates()
+		station_guid_new=station_guid_one.dropna(axis=0,how='any')
+		print (station_guid_new.shape)
+		#将两张表进行链接
+		station_info = pandas.merge(station_guid_key_new,station_guid_new,how='left',on='STATION_GUID')
+		#存储数据
+		station_info.to_csv('taizhan.csv',index=False,sep=',')
+		return 
+	
+	def get_freq_range(self,gps,threshold):
+		[m,n]=self.station_info.shape
+		freq_info = []
+		for i in range(m):
+			lng = self.station_info.loc[i,'STAT_LG']
+			lat = self.station_info.loc[i,'STAT_LA']
+			distance = self.compute_distance(gps,[lng,lat])
+			if distance<threshold:
+				start_freq = self.station_info.loc[i,'FREQ_EFB']
+				end_freq = self.station_info.loc[i,'FREQ_EFE']
+				freq_info.append([start_freq,end_freq])
+		return freq_info
 
 	def read_service(self,conn_str2):
 		sql1 = "select SERVICEDID,FREQNAME,STARTFREQ,ENDFREQ from  RMBT_SERVICE_FREQDETAIL" 
@@ -64,13 +115,6 @@ class method1:
 			freqname.append(i[1])
 			freqrange_list.append(str(i[2])+'-'+str(i[3])+' MHz')
 		return servicedid,freqname,freqrange_list
-
-
-	def compute_distance(self,p1,p2):
-		R=6378137;
-		dx=(p2[0]-p1[0])*R*np.cos(p1[1])
-		dy=(p2[1]-p1[1])*R*np
-		return np.sqrt(dx*dx+dy*dy)
 
 	def read_mysql_config(self):
 		with open(os.getcwd()+'\\mysql.json','r') as data:
@@ -621,13 +665,10 @@ class method1:
 				#判断信号是否合法
 				illegal=0  #0表示非法
 				business_type =0 #表示未知
-				reflect_inf1={'0': [940*1e6, 950*1e6,'移动']}
-				#print ('reflect_inf:',reflect_inf1)
-				for i in reflect_inf1:
-					#print (i)
-					if freq_cf>=reflect_inf1[i][0] and freq_cf<=reflect_inf1[i][1]:
+				for station_freq in self.freq_info:
+					if freq_cf>=station_freq[0]*1e6 and freq_cf<=station_freq[1]*1e6:
 						illegal=1
-						business_type = reflect_inf1[i][2]
+						business_type = '移动'
 						break
 				Sub_illegal.append(illegal)
 				Sub_type.append(business_type)
@@ -1667,3 +1708,5 @@ class method1:
 						break;
 		return [longitude,latitude,height]
 
+if __name__=='__main__':
+	method = method1()
