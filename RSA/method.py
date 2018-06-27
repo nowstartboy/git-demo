@@ -32,13 +32,44 @@ class method1:
 		print ('reflect_inf:',self.reflect_inf)
 		self.station_info = pandas.read_csv('taizhan.csv')
 		self.freq_info = [[940,950]]
-		self.threshold = 100
+		self.threshold = 200
+		self.month_freq_list = []
+		self.month_freq_str = []
+		self.anteid = '0001'
 
 	#读取系统默认参数
 	def read_config(self):
 		with open(os.getcwd()+'\\wxpython.json','r') as data:
 			config_data = json.load(data)
 		return config_data
+	
+	#读取月报频率段
+	def read_month_freq_list(self):
+		#从本地数据文件中读取
+		#month_freq_dataframe = pandas.read_csv('month_freq_list.csv')
+		#从数据库CESHI1.MONTH_FREQ中读取
+		connection_oracle = cx_Oracle.connect(self.conn_str1)
+		sql_freq = "select START_FREQ, END_FREQ from MONTH_FREQ"
+		month_freq_dataframe = pandas.read_sql(sql_freq,connection_oracle)
+		month_freq_list = month_freq_dataframe.values.tolist()
+		month_freq_str = []
+		for freq_list in month_freq_list:
+			month_freq_str.append(str(freq_list[0])+'-'+str(freq_list[1])+' MHz')
+		return month_freq_list,month_freq_str
+	
+	#添加月报频率段
+	def write_month_freq_list(self,new_freq):
+		#存入本地csv文件中
+		# month_freq_array = pandas.DataFrame(np.array(self.month_freq_list),columns=['START_FREQ','END_FREQ'])
+		# month_freq_array.to_csv('month_freq_list.csv',index=False)
+		#存入数据库CESHI1.MONTH_FREQ中
+		connection_oracle = cx_Oracle.connect(self.conn_str1)
+		cur=connection_oracle.cursor()
+		sql_insert_freq = "INSERT INTO MONTH_FREQ(START_FREQ, END_FREQ) VALUES ('%s', '%s')"%(self.month_freq_list[-1][0],self.month_freq_list[-1][1])
+		cur.execute(sql_insert_freq)
+		connection_oracle.commit()
+		cur.close()
+		return 
 		
 	def read_direction_cache(self):
 		with open(os.getcwd()+'\\direction.json','r') as data:
@@ -76,7 +107,7 @@ class method1:
 		station_guid_key = pandas.read_sql(sql10,connection_oracle2)
 		station_guid_key_new = station_guid_key.dropna(axis=0,how='any')
 		print (station_guid_key_new.shape)
-		station_guid_key_new.rename(columns={'GUID':'STATION_GUID'},inplace=True) 
+		station_guid_key_new = station_guid_key_new.rename(columns={'GUID':'STATION_GUID'}) 
 		#读取频率表数据，体站id,其实频率，终止频率
 		station_guid = pandas.read_sql(sql9,connection_oracle2)
 		station_guid_one = station_guid.drop_duplicates()
@@ -633,10 +664,10 @@ class method1:
 				con1 = cx_Oracle.Connection(self.conn_str2)
 				c = pandas.read_sql(sql1, con1)
 				#print (c)
-				if len(c) > 0:
+				if len(c) > 0: 
 					sevice_name = c['SERVICEDID'][0]
 				else:
-					sevice_name = 'No'
+					sevice_name = -1
 				#print ('sevice_name:',sevice_name)
 				
 
@@ -1246,12 +1277,10 @@ class method1:
 		rsa300.SPECTRUM_GetTrace(c_int(0), specSet.traceLength,
 								 byref(traceData), byref(outTracePoints))
 		print('Got trace data.')
-		
 
 		# convert trace data from a ctypes array to a numpy array
 		trace = np.ctypeslib.as_array(traceData)
 		print (len(trace))
-		print (len(freq))
 
 		# Peak power and frequency calculations
 		peakPower = np.amax(trace)
@@ -1334,7 +1363,7 @@ class method1:
 		con.close()
 
 
-	def rmbt_facility_freq_emenv3(self,task_name,start_time,end_time,ssid,mfid='11000001400001',statismode='04',amplitudeunit='01',threshold=6):
+	def rmbt_facility_freq_emenv3(self,task_name,start_time,end_time,ssid,mfid='11000001400001',servicedid='1',statismode='04',amplitudeunit='01',threshold=6):
 		#sql2 = "select Signal_No, Start_time, FREQ_CF, FreQ_BW, COUNT1, peakpower, channel_no from spectrum_identified where Task_Name='%s'" % (task_name)
 		sql2 = "select COUNT1,Signal_No,FREQ_CF,FreQ_BW,peakpower from SPECTRUM_IDENTIFIED where Task_Name='%s'" % (
 			task_name) + "and Start_time between to_date('%s'," % (
@@ -1359,7 +1388,7 @@ class method1:
 				occ = Decimal(occ * 100).quantize(Decimal('0.00'))
 			statisstartday = str(start_time)
 			statisendday = str(end_time)
-			servicedid = df_r[sig]['SIGNAL_NO'][0]
+			#servicedid = df_r[sig]['SIGNAL_NO'][0]
 			cf = df_r[sig]['FREQ_CF'].values
 			cf_avg = np.average(cf) / 1e6
 			cf_avg = Decimal(cf_avg).quantize(Decimal('0.0000000'))
@@ -1470,20 +1499,6 @@ class method1:
 			illegal.append(i[7])
 		return cf,bf,ef,band,longitude,latitude,illegal,peakPower
 
-	# def read_service(self,conn_str2):
-		# sql1 = "select SERVICEDID,FREQNAME,STARTFREQ,ENDFREQ from  RMBT_SERVICE_FREQDETAIL" 
-		# con1 = mdb.connect(self.mysql_config['host'], self.mysql_config['user'], self.mysql_config['password'], '110000_rmdsd')
-		# #con1 = cx_Oracle.connect(conn_str2)
-		# c = pandas.read_sql(sql1, con1)
-		# con1.close()
-		# servicedid = []
-		# freqname = []
-		# freqrange_list=[]
-		# for i in c.values:
-			# servicedid.append(i[0])
-			# freqname.append(i[1])
-			# freqrange_list.append(str(i[2])+'-'+str(i[3])+' MHz')
-		# return servicedid,freqname,freqrange_list
 
 
 	def get_GPS(self):

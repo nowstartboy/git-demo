@@ -16,6 +16,7 @@ from numpy import sin
 from numpy import linspace
 from numpy import argmax
 from numpy import float64
+from numpy import max
 import json
 from matplotlib.backends.backend_wxagg import FigureCanvasWxAgg as FigureCanvas
 from matplotlib.figure import Figure
@@ -350,7 +351,7 @@ class WorkerThread(threading.Thread):     #画实时监测信号动态图
 			trace1.append(data1)
 			trace2.append(data1[3:])
 			
-			if time.time()-load_time>35 and not work_state:
+			if time.time()-load_time>35 :
 				trace2 = array(trace2)
 				time_now=str(datetime.datetime.now().strftime('%F %H:%M:%S')) # 总表的起始时间
 				print (1)
@@ -507,7 +508,7 @@ class WorkerThread2(threading.Thread):    #画无人机动态图线程
 			# lines_waterfall=[]
 			
 			self.window.axes_score_new.set_xlim(freq[0],freq[-1])
-			print (time1)
+			#print (time1)
 			if x_y > 100:
 				#del x_y[time1+200]
 				x_y = 0
@@ -1586,137 +1587,142 @@ class MyPanel1_1 ( wx.Panel ):
 				wx.MessageBox('No instruments connected  .', "Error" ,wx.OK | wx.ICON_ERROR)
 			else:
 				if detection_state==0:
-					# a = Wait_GPS(self)
-					# a.OnStart()
-					# #while not a.GPS_end:
-					# if a.ShowModal()==wx.ID_OK:
-						# if a.GPS_state:
-							# panelOne1.m_textCtrl4.SetValue(str(a.location[0])[0:6])
-							# panelOne1.m_textCtrl5.SetValue(str(a.location[1])[0:6])
-							# panelOne1.m_textCtrl6.SetValue(str(a.location[2])[0:6]+' m')
-							# method.freq_info = method.get_freq_range(a.location,method.threshold)
-							
-							##########################################################自定义监测
-							# read start_freq
-							start_freq=self.m_textCtrl1.GetValue()
-							self.m_choice1_string=self.m_choice1.GetString(self.m_choice1.GetSelection())
-							if start_freq.strip()=='':
-								#print (config_data)
-								start_freq=config_data['start_freq']
-								if self.m_choice1_string=='GHz':
-									self.m_textCtrl1.SetValue(str(start_freq/(10**3)))
-								elif self.m_choice1_string=='KHz':
-									self.m_textCtrl1.SetValue(str(start_freq*(10**3)))
-								else:
-									self.m_textCtrl1.SetValue(str(start_freq))
-							else:
-								try:
-									#print ('start_freq:',start_freq)
-									start_freq=float(start_freq)
-									#print (self.m_choice1.GetString()=='GHz')  
-									if self.m_choice1_string=='GHz':
-										start_freq=start_freq*(10**3)
-										print ('start_freq_mid:',start_freq)
-									if self.m_choice1_string=='KHz':
-										start_freq=start_freq/(10**3)
-								except (ValueError,TypeError) as e:
+					try:
+						# a = Wait_GPS(self)
+						# a.OnStart()
+						# #while not a.GPS_end:
+						# if a.ShowModal()==wx.ID_OK:
+							# if a.GPS_state:
+								# panelOne1.m_textCtrl4.SetValue(str(a.location[0])[0:6])
+								# panelOne1.m_textCtrl5.SetValue(str(a.location[1])[0:6])
+								# panelOne1.m_textCtrl6.SetValue(str(a.location[2])[0:6]+' m')
+								# method.freq_info = method.get_freq_range([112.54,37.84,2],method.threshold)
+
+								##########################################################自定义监测
+								# read start_freq
+								start_freq=self.m_textCtrl1.GetValue()
+								self.m_choice1_string=self.m_choice1.GetString(self.m_choice1.GetSelection())
+								if start_freq.strip()=='':
+									#print (config_data)
 									start_freq=config_data['start_freq']
-									wx.MessageBox(u' 初始频率输入须为数值', "Message" ,wx.OK | wx.ICON_INFORMATION)
-							start_freq=start_freq*1e6
-							#print ('start_freq(MHz):',start_freq)
-							#read end_freq
-							end_freq=self.m_textCtrl2.GetValue()
-							self.m_choice2_string=self.m_choice2.GetString(self.m_choice2.GetSelection())
-							if end_freq.strip()=='':
-								end_freq=config_data['end_freq']
-								if self.m_choice2_string=='GHz':
-									self.m_textCtrl2.SetValue(str(end_freq/(10**3)))
-								elif self.m_choice2_string=='KHz':
-									self.m_textCtrl2.SetValue(str(end_freq*(10**3)))
+									if self.m_choice1_string=='GHz':
+										self.m_textCtrl1.SetValue(str(start_freq/(10**3)))
+									elif self.m_choice1_string=='KHz':
+										self.m_textCtrl1.SetValue(str(start_freq*(10**3)))
+									else:
+										self.m_textCtrl1.SetValue(str(start_freq))
 								else:
-									self.m_textCtrl2.SetValue(str(end_freq))
-							else:
-								try:
-									end_freq=float(end_freq)
-									if self.m_choice2_string=='GHz':
-										end_freq=end_freq*(10**3)
-									if self.m_choice2_string=='KHz':
-										end_freq=end_freq/(10**3)
-								except (ValueError,TypeError) as e:
+									try:
+										#print ('start_freq:',start_freq)
+										start_freq=float(start_freq)
+										#print (self.m_choice1.GetString()=='GHz')  
+										if self.m_choice1_string=='GHz':
+											start_freq=start_freq*(10**3)
+											print ('start_freq_mid:',start_freq)
+										if self.m_choice1_string=='KHz':
+											start_freq=start_freq/(10**3)
+									except (ValueError,TypeError) as e:
+										start_freq=config_data['start_freq']
+										wx.MessageBox(u' 初始频率输入须为数值', "Message" ,wx.OK | wx.ICON_INFORMATION)
+								start_freq=start_freq*1e6
+								#print ('start_freq(MHz):',start_freq)
+								#read end_freq
+								end_freq=self.m_textCtrl2.GetValue()
+								self.m_choice2_string=self.m_choice2.GetString(self.m_choice2.GetSelection())
+								if end_freq.strip()=='':
 									end_freq=config_data['end_freq']
-									wx.MessageBox(u' 终止频率输入须为数值', "Message" ,wx.OK | wx.ICON_INFORMATION)
-							end_freq=end_freq*1e6
-							span=end_freq-start_freq
-							# print (start_freq)
-							# print (end_freq)
-							# print (span)
-							if span <=0:
-								#event.GetEventObject().SetValue(not state)
-								wx.MessageBox(u' 终止频率应大于起始频率', "Message" ,wx.OK | wx.ICON_INFORMATION)
-								return 
-							#Set center_freq and span
-							self.m_textCtrl11.SetValue(str((start_freq+end_freq)/(2e6))+'MHz')
-							self.m_textCtrl12.SetValue(str(span/(1e6))+'MHz')
-							#Set step_size=span/801
-							step_size=span/801
-							self.m_choice8_string=self.m_choice8.GetString(self.m_choice8.GetSelection())
-							if self.m_choice8_string=='GHz':
-								step_size=step_size/(10**9)
-							elif self.m_choice8_string=='KHz':
-								step_size=step_size/(10**3)
-							else:
-								step_size=step_size/(10**6)
-							self.m_textCtrl10.SetValue(str(step_size))
-							#read Antenna_number
-							anteid=config_data['Antenna_number']
-							
-							#read rbw
-							rbw=self.m_textCtrl3.GetValue()
-							self.m_choice3_string=self.m_choice3.GetString(self.m_choice3.GetSelection())
-							if rbw.strip()=='':
-								rbw=config_data['RBW']
-								if self.m_choice3_string=='GHz':
-									self.m_textCtrl3.SetValue(str(rbw/(10**6)))
-								elif self.m_choice3_string=='MHz':
-									self.m_textCtrl3.SetValue(str(rbw/(10**3)))
+									if self.m_choice2_string=='GHz':
+										self.m_textCtrl2.SetValue(str(end_freq/(10**3)))
+									elif self.m_choice2_string=='KHz':
+										self.m_textCtrl2.SetValue(str(end_freq*(10**3)))
+									else:
+										self.m_textCtrl2.SetValue(str(end_freq))
 								else:
-									self.m_textCtrl3.SetValue(str(rbw))
-							else:
-								try:
-									rbw=float(rbw)
-									if self.m_choice3_string=='GHz':
-										rbw=rbw*(10**6)
-									if self.m_choice3_string=='MHz':
-										rbw=rbw*(10**3)
-								except (ValueError,TypeError) as e:
+									try:
+										end_freq=float(end_freq)
+										if self.m_choice2_string=='GHz':
+											end_freq=end_freq*(10**3)
+										if self.m_choice2_string=='KHz':
+											end_freq=end_freq/(10**3)
+									except (ValueError,TypeError) as e:
+										end_freq=config_data['end_freq']
+										wx.MessageBox(u' 终止频率输入须为数值', "Message" ,wx.OK | wx.ICON_INFORMATION)
+								end_freq=end_freq*1e6
+								span=end_freq-start_freq
+								# print (start_freq)
+								# print (end_freq)
+								# print (span)
+								if span <=0:
+									#event.GetEventObject().SetValue(not state)
+									wx.MessageBox(u' 终止频率应大于起始频率', "Message" ,wx.OK | wx.ICON_INFORMATION)
+									return 
+								#Set center_freq and span
+								self.m_textCtrl11.SetValue(str((start_freq+end_freq)/(2e6))+'MHz')
+								self.m_textCtrl12.SetValue(str(span/(1e6))+'MHz')
+								#Set step_size=span/801
+								step_size=span/801
+								self.m_choice8_string=self.m_choice8.GetString(self.m_choice8.GetSelection())
+								if self.m_choice8_string=='GHz':
+									step_size=step_size/(10**9)
+								elif self.m_choice8_string=='KHz':
+									step_size=step_size/(10**3)
+								else:
+									step_size=step_size/(10**6)
+								self.m_textCtrl10.SetValue(str(step_size))
+								#read Antenna_number
+								#anteid=config_data['Antenna_number']
+								anteid = method.anteid
+								
+								#read rbw
+								rbw=self.m_textCtrl3.GetValue()
+								self.m_choice3_string=self.m_choice3.GetString(self.m_choice3.GetSelection())
+								if rbw.strip()=='':
 									rbw=config_data['RBW']
-									wx.MessageBox(u' RBW输入须为数值', "Message" ,wx.OK | wx.ICON_INFORMATION)
-							rbw=rbw*1e3
-							
-							#read vbw
-							vbw=config_data['VBW']
-							vbw=vbw*1e3
-							
-							#read time
-							t=self.m_textCtrl5.GetValue()
-							if t.strip()=='':
-								t=0.001
-							else:
-								try:
-									t=float(t)
-								except (ValueError,TypeError) as e:
-									t=0.002
-									wx.MessageBox(u' 时间输入须为数值', "Message" ,wx.OK | wx.ICON_INFORMATION)
-							t=t*3600
-							self.m_textCtrl5.SetValue(str(float(t/3600)))
-							continue_time=t
-							#q=Queue()
-							self.count+=1
-							detection_state=1
-							t1=WorkerThread(self.count,self,rsa_true,deviceSerial_true,span,t,anteid,start_freq,end_freq,rbw,vbw)
-							self.threads.append(t1)
-							t1.start()
-							print ('success')
+									if self.m_choice3_string=='GHz':
+										self.m_textCtrl3.SetValue(str(rbw/(10**6)))
+									elif self.m_choice3_string=='MHz':
+										self.m_textCtrl3.SetValue(str(rbw/(10**3)))
+									else:
+										self.m_textCtrl3.SetValue(str(rbw))
+								else:
+									try:
+										rbw=float(rbw)
+										if self.m_choice3_string=='GHz':
+											rbw=rbw*(10**6)
+										if self.m_choice3_string=='MHz':
+											rbw=rbw*(10**3)
+									except (ValueError,TypeError) as e:
+										rbw=config_data['RBW']
+										wx.MessageBox(u' RBW输入须为数值', "Message" ,wx.OK | wx.ICON_INFORMATION)
+								rbw=rbw*1e3
+								
+								#read vbw
+								vbw=config_data['VBW']
+								vbw=vbw*1e3
+								
+								#read time
+								t=self.m_textCtrl5.GetValue()
+								if t.strip()=='':
+									t=0.001
+								else:
+									try:
+										t=float(t)
+									except (ValueError,TypeError) as e:
+										t=0.002
+										wx.MessageBox(u' 时间输入须为数值', "Message" ,wx.OK | wx.ICON_INFORMATION)
+								t=t*3600
+								self.m_textCtrl5.SetValue(str(float(t/3600)))
+								continue_time=t
+								#q=Queue()
+								self.count+=1
+								detection_state=1
+								t1=WorkerThread(self.count,self,rsa_true,deviceSerial_true,span,t,anteid,start_freq,end_freq,rbw,vbw)
+								self.threads.append(t1)
+								t1.start()
+								print ('success')
+								
+					except:
+						detection_state = 0
 				else:
 					wx.MessageBox(u'已处于监测状态，请先停止当前任务，然后开始新的任务', "Message" ,wx.OK | wx.ICON_INFORMATION)
 
@@ -2082,105 +2088,94 @@ class MyPanel1_2 ( wx.Panel ):
 				wx.MessageBox('No instruments connected  .', "Error" ,wx.OK | wx.ICON_ERROR)
 			else:
 				if detection_state==0:
-					#GPS信息
-					# a = Wait_GPS(self)
-					# a.OnStart()
-					# #while not a.GPS_end:
-					# if a.ShowModal()==wx.ID_OK:
-						# if a.GPS_state:
-							# panelOne1.m_textCtrl4.SetValue(str(a.location[0])[0:6])
-							# panelOne1.m_textCtrl5.SetValue(str(a.location[1])[0:6])
-							# panelOne1.m_textCtrl6.SetValue(str(a.location[2])[0:6]+' m')
-							# method.freq_info = method.get_freq_range(a.location,method.threshold)
-
-							
-							###################################################月报监测
-							freq_select_string=self.choice1.GetString(self.choice1.GetSelection())
-							freq_select=[float(freq) for freq in freq_select_string.split()[0].split('-')]
-							start_freq=freq_select[0]*1e6
-							end_freq=freq_select[1]*1e6
-							span=end_freq-start_freq
-							#print ('mode yuebao:',start_freq,end_freq,span)
-							
-							#Set center_freq and span
-							self.m_textCtrl11.SetValue(str((start_freq+end_freq)/(2e6))+'MHz')
-							self.m_textCtrl12.SetValue(str(span/(1e6))+'MHz')
-							#Set step_size=span/801
-							step_size=span/801
-							self.choice2_string=self.choice2.GetString(self.choice2.GetSelection())
-							if self.choice2_string=='GHz':
-								step_size=step_size/(10**9)
-							elif self.choice2_string=='KHz':
-								step_size=step_size/(10**3)
-							else:
-								step_size=step_size/(10**6)
-							self.textCtrl2.SetValue("%.3f"%step_size)
-							#read Antenna_number
-							anteid=config_data['Antenna_number']
-							
-							#read rbw
-							rbw=self.textCtrl3.GetValue()
-							self.choice3_string=self.choice3.GetString(self.choice3.GetSelection())
-							if rbw.strip()=='':
-								rbw=config_data['RBW']
-								if self.choice3_string=='GHz':
-									self.textCtrl3.SetValue(str(rbw/(10**6)))
-								elif self.choice3_string=='MHz':
-									self.textCtrl3.SetValue(str(rbw/(10**3)))
+					try:
+						#GPS信息
+						# a = Wait_GPS(self)
+						# a.OnStart()
+						# #while not a.GPS_end:
+						# if a.ShowModal()==wx.ID_OK:
+							# if a.GPS_state:
+								# panelOne1.m_textCtrl4.SetValue(str(a.location[0])[0:6])
+								# panelOne1.m_textCtrl5.SetValue(str(a.location[1])[0:6])
+								# panelOne1.m_textCtrl6.SetValue(str(a.location[2])[0:6]+' m')
+								# method.freq_info = method.get_freq_range([112.54,37.84,2],method.threshold)
+								###################################################月报监测
+								freq_select_string=self.choice1.GetString(self.choice1.GetSelection())
+								freq_select=[float(freq) for freq in freq_select_string.split()[0].split('-')]
+								start_freq=freq_select[0]*1e6
+								end_freq=freq_select[1]*1e6
+								span=end_freq-start_freq
+								#print ('mode yuebao:',start_freq,end_freq,span)
+								
+								#Set center_freq and span
+								self.m_textCtrl11.SetValue(str((start_freq+end_freq)/(2e6))+'MHz')
+								self.m_textCtrl12.SetValue(str(span/(1e6))+'MHz')
+								#Set step_size=span/801
+								step_size=span/801
+								self.choice2_string=self.choice2.GetString(self.choice2.GetSelection())
+								if self.choice2_string=='GHz':
+									step_size=step_size/(10**9)
+								elif self.choice2_string=='KHz':
+									step_size=step_size/(10**3)
 								else:
-									self.textCtrl3.SetValue(str(rbw))
-							else:
-								try:
-									rbw=float(rbw)
-									if self.choice3_string=='GHz':
-										rbw=rbw*(10**6)
-									if self.choice3_string=='MHz':
-										rbw=rbw*(10**3)
-								except (ValueError,TypeError) as e:
+									step_size=step_size/(10**6)
+								self.textCtrl2.SetValue("%.3f"%step_size)
+								#read Antenna_number
+								#anteid=config_data['Antenna_number']
+								anteid = method.anteid
+								
+								#read rbw
+								rbw=self.textCtrl3.GetValue()
+								self.choice3_string=self.choice3.GetString(self.choice3.GetSelection())
+								if rbw.strip()=='':
 									rbw=config_data['RBW']
-									wx.MessageBox(u' RBW输入须为数值', "Message" ,wx.OK | wx.ICON_INFORMATION)
-							rbw=rbw*1e3
-							
-							#read vbw
-							vbw=config_data['VBW']
-							self.textCtrl10.SetValue(str(vbw))
-							vbw=vbw*1e3
-							
-							#read time
-							t=self.textCtrl5.GetValue()
-							if t.strip()=='':
-								t=0.001
-							else:
-								try:
-									t=float(t)
-								except (ValueError,TypeError) as e:
-									t=0.002
-									wx.MessageBox(u' 终止频率输入须为数值', "Message" ,wx.OK | wx.ICON_INFORMATION)
-							t=t*3600
-							self.textCtrl5.SetValue(str(float(t/3600)))
-							continue_time=t
-							
-							
-							#q=Queue()
-							self.count+=1
-							detection_state=1
-							t1=WorkerThread(self.count,self,rsa_true,deviceSerial_true,span,t,anteid,start_freq,end_freq,rbw,vbw)
-							self.threads.append(t1)
-							t1.start()
-
-							print ('success')
-							#结束后按钮还原
-							#event.GetEventObject().SetValue(not state)
-						# if a.ShowModal()==wx.ID_CANCEL:
-							# # dlg = wx.MessageDialog(None,u"Haven't got the location information ,Do you really want to cancel?", u"Warning !", wx.YES_NO | wx.ICON_INFORMATION)
-							# # if dlg.ShowModal() == wx.ID_YES:
-								# # a.OnStop()
-							# # else:
-								# # if a.GPS_wait==False:
-									# # a.show()
-							# print ('shut up')
-							# a.OnStop()
-							# a.Destroy()
+									if self.choice3_string=='GHz':
+										self.textCtrl3.SetValue(str(rbw/(10**6)))
+									elif self.choice3_string=='MHz':
+										self.textCtrl3.SetValue(str(rbw/(10**3)))
+									else:
+										self.textCtrl3.SetValue(str(rbw))
+								else:
+									try:
+										rbw=float(rbw)
+										if self.choice3_string=='GHz':
+											rbw=rbw*(10**6)
+										if self.choice3_string=='MHz':
+											rbw=rbw*(10**3)
+									except (ValueError,TypeError) as e:
+										rbw=config_data['RBW']
+										wx.MessageBox(u' RBW输入须为数值', "Message" ,wx.OK | wx.ICON_INFORMATION)
+								rbw=rbw*1e3
+								
+								#read vbw
+								vbw=config_data['VBW']
+								self.textCtrl10.SetValue(str(vbw))
+								vbw=vbw*1e3
+								
+								#read time
+								t=self.textCtrl5.GetValue()
+								if t.strip()=='':
+									t=0.001
+								else:
+									try:
+										t=float(t)
+									except (ValueError,TypeError) as e:
+										t=0.002
+										wx.MessageBox(u' 终止频率输入须为数值', "Message" ,wx.OK | wx.ICON_INFORMATION)
+								t=t*3600
+								self.textCtrl5.SetValue(str(float(t/3600)))
+								continue_time=t
+								
+								
+								#q=Queue()
+								self.count+=1
+								detection_state=1
+								t1=WorkerThread(self.count,self,rsa_true,deviceSerial_true,span,t,anteid,start_freq,end_freq,rbw,vbw)
+								self.threads.append(t1)
+								t1.start()
+								print ('success')
+					except:
+						detection_state = 0
 
 				else:
 					wx.MessageBox(u'已处于监测状态，请先停止当前任务，然后开始新的任务', "Message" ,wx.OK | wx.ICON_INFORMATION)
@@ -3577,14 +3572,19 @@ class MyPanel4 ( wx.Panel ):
 		self.m_choice3_string=self.m_choice3.GetString(self.m_choice3.GetSelection())
 		if rbw == '':
 			rbw = 1e3   #默认值为1kHz
-			self.m_textCtrl4.SetValue(str(rbw))
+			if self.m_choice3_string == 'KHz':
+				self.m_textCtrl4.SetValue(str(rbw/1e3))
+			elif self.m_choice3_string == 'MHz':
+				self.m_textCtrl4.SetValue(str(rbw/1e6))
+			else:
+				self.m_textCtrl4.SetValue(str(rbw/1e9))
 		else:
 			try:
 				rbw=float(rbw)
 				if self.m_choice3_string == 'KHz':
-					rbw = rbw * 1e3
+					rbw = rbw*1e3
 				elif self.m_choice3_string == 'MHz':
-					rbw = rbw * 1e6
+					rbw = rbw*1e6
 				else:
 					rbw = rbw * 1e9
 			except (ValueError,TypeError) as e:
@@ -3595,7 +3595,12 @@ class MyPanel4 ( wx.Panel ):
 		self.m_choice4_string=self.m_choice4.GetString(self.m_choice4.GetSelection())
 		if vbw == '':
 			vbw = 1e3   #默认值为1kHz
-			self.m_textCtrl5.SetValue(str(vbw))
+			if self.m_choice4_string == 'KHz':
+				self.m_textCtrl5.SetValue(str(rbw/1e3))
+			elif self.m_choice4_string == 'MHz':
+				self.m_textCtrl5.SetValue(str(rbw/1e6))
+			else:
+				self.m_textCtrl5.SetValue(str(rbw/1e9))
 		else:
 			try:
 				vbw=float(vbw)
@@ -3627,7 +3632,15 @@ class MyPanel4 ( wx.Panel ):
 				input_detail = self.getInput()
 				print (input_detail)
 				if self.input_state == 1:
-					peakPower,self.freq,self.traceData=method.find_direction(rsa_true,input_detail[0],input_detail[1],input_detail[2])
+					centerFreq = (input_detail[0]+input_detail[1])/2
+					Span = input_detail[1]-input_detail[0]
+					k = 5 #连续扫描多少帧，取最大值
+					self.traceAll = []
+					for i in range(k):
+						peakPower,self.freq,self.traceData=method.find_direction(rsa_true,centerFreq,Span,input_detail[2])
+						self.traceAll.append(self.traceData)
+					self.traceData = max(array(self.traceAll),0).tolist()
+					peakPower = max(self.traceData)
 					print (self.traceData[0])
 					print (self.freq[0],self.freq[-1])
 					#####################将信号峰值显示到表格中
@@ -4021,7 +4034,7 @@ class MyPanel5 ( wx.Panel ):
 		
 		################
 		bSizer174 = wx.BoxSizer(wx.HORIZONTAL)
-		self.m_button2=wx.Button(self,wx.ID_ANY,u"检测无人机信号",wx.DefaultPosition,(130,25),0)
+		self.m_button2=wx.Button(self,wx.ID_ANY,u"开始检测",wx.DefaultPosition,(120,25),0)
 		bSizer174.Add(self.m_button2,0,wx.ALL|wx.ALIGN_CENTER,0)
 		self.m_button2.Bind(wx.EVT_BUTTON,self.start_uav)
 		
@@ -4186,7 +4199,8 @@ class MyPanel5 ( wx.Panel ):
 			self.Q=[]
 			self.peak_freq_list=[]
 			self.band_list=[]
-			anteid=config_data['Antenna_number']
+			#anteid=config_data['Antenna_number']
+			anteid = method.anteid
 			#self.rbw=config_data['RBW']*1e3
 			self.vbw=config_data['VBW']*1e3
 			self.t2=WorkerThread2(self.count,self,rsa_true,deviceSerial_true,t,13,anteid,self.rbw,self.vbw,self.freq_interval)
@@ -4499,7 +4513,7 @@ class MyDialog1 ( wx.Dialog ):
 	
 	def __init__( self, parent,title=u"默认配置" ):
 
-		wx.Dialog.__init__ ( self, parent, id = wx.ID_ANY, title = title, pos = wx.DefaultPosition, size = wx.Size( 535,570 ), style = wx.DEFAULT_DIALOG_STYLE|wx.SYSTEM_MENU )
+		wx.Dialog.__init__ ( self, parent, id = wx.ID_ANY, title = title, pos = wx.DefaultPosition, size = wx.Size( 580,570 ), style = wx.DEFAULT_DIALOG_STYLE|wx.SYSTEM_MENU )
 		
 		self.SetSizeHints( wx.DefaultSize, wx.DefaultSize )
 		
@@ -4652,7 +4666,7 @@ class MyDialog1 ( wx.Dialog ):
 		bSizer169.Add( sbSizer5, 2, wx.EXPAND, 5 )
 		
 		
-		self.bx4=wx.StaticBox( self, wx.ID_ANY, u"天线配置:" )
+		self.bx4=wx.StaticBox( self, wx.ID_ANY, u"月报频率段添加:" )
 		#bx1.SetBackgroundColour("MEDIUM GOLDENROD")
 		self.bx4.SetForegroundColour("SLATE BLUE")
 		font = wx.Font(10, wx.DECORATIVE,wx.NORMAL,wx.BOLD)
@@ -4661,23 +4675,29 @@ class MyDialog1 ( wx.Dialog ):
 		
 		bSizer183 = wx.BoxSizer( wx.HORIZONTAL )
 		
-		self.m_staticText89 = wx.StaticText( self, wx.ID_ANY, u"天线型号：", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_staticText89 = wx.StaticText( self, wx.ID_ANY, u"初始频率：", wx.DefaultPosition, wx.DefaultSize, 0 )
 		self.m_staticText89.Wrap( -1 )
-		bSizer183.Add( self.m_staticText89, 0, wx.ALL, 5 )
+		bSizer183.Add( self.m_staticText89, 0, wx.ALL|wx.ALIGN_CENTER, 5 )
+		self.m_textCtrl48 = wx.TextCtrl( self, wx.ID_ANY, str(config_data['month_start_freq']), wx.DefaultPosition, wx.DefaultSize, 0 )
+		bSizer183.Add( self.m_textCtrl48, 0, wx.ALL|wx.ALIGN_CENTER, 5 )
+		self.m_staticText1 = wx.StaticText( self, wx.ID_ANY, u"MHz", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_staticText1.Wrap( -1 )
+		bSizer183.Add( self.m_staticText1, 0, wx.ALL|wx.ALIGN_CENTER, 5 )
 		
-		self.m_textCtrl48 = wx.TextCtrl( self, wx.ID_ANY, config_data['Antenna_number'], wx.DefaultPosition, wx.DefaultSize, 0 )
-		bSizer183.Add( self.m_textCtrl48, 0, wx.ALL, 5 )
-		
-		self.m_staticText90 = wx.StaticText( self, wx.ID_ANY, u"    天线增益：", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_staticText90 = wx.StaticText( self, wx.ID_ANY, u"  终止频率：", wx.DefaultPosition, wx.DefaultSize, 0 )
 		self.m_staticText90.Wrap( -1 )
-		bSizer183.Add( self.m_staticText90, 0, wx.ALL, 5 )
-		
-		self.m_textCtrl49 = wx.TextCtrl( self, wx.ID_ANY, str(config_data['Antenna_level']), wx.DefaultPosition, wx.DefaultSize, 0 )
-		bSizer183.Add( self.m_textCtrl49, 0, wx.ALL, 5 )
-		
-		self.m_staticText91 = wx.StaticText( self, wx.ID_ANY, u"dB", wx.DefaultPosition, wx.DefaultSize, 0 )
+		bSizer183.Add( self.m_staticText90, 0, wx.ALL|wx.ALIGN_CENTER, 5 )
+		self.m_textCtrl49 = wx.TextCtrl( self, wx.ID_ANY, str(config_data['month_end_freq']), wx.DefaultPosition, wx.DefaultSize, 0 )
+		bSizer183.Add( self.m_textCtrl49, 0, wx.ALL|wx.ALIGN_CENTER, 5 )
+		self.m_staticText91 = wx.StaticText( self, wx.ID_ANY, u"MHz  ", wx.DefaultPosition, wx.DefaultSize, 0 )
 		self.m_staticText91.Wrap( -1 )
-		bSizer183.Add( self.m_staticText91, 0, wx.ALL, 5 )
+		bSizer183.Add( self.m_staticText91, 0, wx.ALL|wx.ALIGN_CENTER, 5 )
+		
+		self.m_button1=wx.Button(self,wx.ID_ANY,u"添加",wx.DefaultPosition,(120,25),0)
+		bSizer183.Add(self.m_button1,1,wx.ALL|wx.ALIGN_CENTER,0)
+		self.m_button1.Bind(wx.EVT_BUTTON,self.add_freqList)
+		
+		
 		
 		sbSizer6.Add( bSizer183, 1, wx.EXPAND, 5 )
 		bSizer169.Add( sbSizer6, 1, wx.EXPAND, 5 )
@@ -4788,7 +4808,8 @@ class MyDialog1 ( wx.Dialog ):
 		config_value.append(self.m_textCtrl43.GetValue())
 		config_value.append(self.m_textCtrl42.GetValue())
 		config_value.append(self.m_textCtrl44.GetValue())
-		config_value.append(self.m_textCtrl45.GetValue())
+		#config_value.append(self.m_textCtrl45.GetValue())
+		config_value.append(0) #没有输入，暂留空
 		config_value.append(self.m_textCtrl46.GetValue())
 		config_value.append(self.m_dirPicker2.GetPath())
 		config_value.append(self.m_dirPicker3.GetPath())
@@ -4814,6 +4835,32 @@ class MyDialog1 ( wx.Dialog ):
 		if rb.GetLabel()=='no connection':
 			database_state=0
 		print (database_state)
+		
+	def add_freqList(self,event):
+		global panelOne1
+		start_freq_input = str(self.m_textCtrl48.GetValue())
+		end_freq_input = str(self.m_textCtrl49.GetValue())
+		try:
+			start_freq=float(start_freq_input)
+		except (ValueError,TypeError) as e:
+			wx.MessageBox(u' 输入频率须为数值', "Message" ,wx.OK | wx.ICON_INFORMATION) 
+			return
+		try:
+			end_freq=float(end_freq_input)
+		except (ValueError,TypeError) as e:
+			wx.MessageBox(u' 输入频率须为数值', "Message" ,wx.OK | wx.ICON_INFORMATION)
+			return
+		is_has = 0   #判断插入的频率段是否已经存在
+		for freq_list in method.month_freq_list:
+			if freq_list==[start_freq,end_freq]:
+				is_has = 1
+				break;
+		if is_has == 0:
+			method.month_freq_list.append([start_freq,end_freq])
+			method.month_freq_str.append(str(start_freq)+'-'+str(end_freq)+' MHz')
+			method.write_month_freq_list([start_freq,end_freq])
+			panelOne1.panelOne_two.choice1.SetItems(method.month_freq_str)
+			panelOne1.panelOne_two.choice1.SetSelection(0)
 		
 ###########################################################################
 ## Class MyFrame1 主框架
@@ -4870,9 +4917,10 @@ class MyFrame1 ( wx.Frame ):
 		
 		self.m_menu3 = wx.Menu()
 		config=self.m_menu3.Append(-1,u"默认参数设置")
+		station_update = self.m_menu3.Append(-1,u"台站数据更新")
 		self.m_menubar1.Append( self.m_menu3, u"参数配置" ) 
 		self.Bind(wx.EVT_MENU, self.select_Config, config)
-		
+		self.Bind(wx.EVT_MENU, self.station_data_update, station_update)
 		
 		self.m_menu4 = wx.Menu()
 
@@ -4898,164 +4946,6 @@ class MyFrame1 ( wx.Frame ):
 		self.bSizer1 = wx.BoxSizer( wx.HORIZONTAL )
 		
 		self.buttom_color="SEA GREEN"
-		'''
-		self.bSizer2 = wx.BoxSizer( wx.VERTICAL )
-		
-		bmp = wx.Image("button2.png", wx.BITMAP_TYPE_PNG).ConvertToBitmap()
-		
-		self.buttom_color="SEA GREEN"
-		self.m_panel3 = wx.Panel( self, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
-		self.m_panel3.SetBackgroundColour(self.buttom_color)
-		self.bSizer8 = wx.BoxSizer( wx.VERTICAL )
-		
-		#panel5 bSizer9
-		self.m_panel5 = wx.Panel( self.m_panel3, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
-		self.bSizer9 = wx.BoxSizer( wx.VERTICAL )
-		self.m_panel5.SetBackgroundColour("MEDIUM TURQUOISE")
-		
-		#self.m_button1 = wx.Button( self, wx.ID_ANY, u"频谱监控", wx.DefaultPosition, wx.DefaultSize, 0 )
-		#self.bSizer2.Add( self.m_button1, 0, wx.ALL, 5 )
-		self.m_button1 = buttons.GenBitmapTextButton(self.m_panel5, -1, bmp, u"频谱监控  ",style=wx.NO_BORDER)#位图文本按钮
-		self.m_button1.SetUseFocusIndicator(False)
-		#self.m_button1.SetBackgroundColour("MEDIUM TURQUOISE")
-		self.bSizer9.Add( self.m_button1, 0, wx.ALL, 5 )
-		self.m_panel5.SetSizer( self.bSizer9 )
-		self.m_panel5.Layout()
-		self.bSizer9.Fit( self.m_panel5 )
-		self.bSizer8.Add( self.m_panel5, 1, wx.EXPAND, 5 )
-		self.m_staticline1 = wx.StaticLine( self.m_panel3, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.LI_HORIZONTAL )
-		self.bSizer8.Add( self.m_staticline1, 0, wx.EXPAND |wx.ALL, 0 )
-		
-		
-		
-		#panel6 bSizer10
-		#self.m_button2 = wx.Button( self, wx.ID_ANY, u"台站对比", wx.DefaultPosition, wx.DefaultSize, 0 )
-		#self.bSizer2.Add( self.m_button2, 0, wx.ALL, 5 )
-		
-		self.m_panel6 = wx.Panel( self.m_panel3, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
-		self.m_panel6.SetBackgroundColour(self.buttom_color)
-		self.bSizer10 = wx.BoxSizer( wx.VERTICAL )
-		self.m_button2 = buttons.GenBitmapTextButton(self.m_panel6, -1, bmp, u"台站对比  ",style=wx.NO_BORDER)#位图文本按钮
-		self.m_button2.SetUseFocusIndicator(False)
-		self.bSizer10.Add( self.m_button2, 0, wx.ALL, 5 )
-		self.m_panel6.SetSizer( self.bSizer10 )
-		self.m_panel6.Layout()
-		self.bSizer10.Fit( self.m_panel6 )
-		self.bSizer8.Add( self.m_panel6, 1, wx.EXPAND, 5 )
-		self.m_staticline2 = wx.StaticLine( self.m_panel3, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.LI_HORIZONTAL )
-		self.bSizer8.Add( self.m_staticline2, 0, wx.EXPAND |wx.ALL, 0 )
-		
-		
-		#panel7 bSizer11
-		#self.m_button3 = wx.Button( self, wx.ID_ANY, u"占用度分析", wx.DefaultPosition, wx.DefaultSize, 0 )
-		#self.bSizer2.Add( self.m_button3, 0, wx.ALL, 5 )
-		
-		self.m_panel7 = wx.Panel( self.m_panel3, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
-		self.m_panel7.SetBackgroundColour(self.buttom_color)
-		self.bSizer11 = wx.BoxSizer( wx.VERTICAL )
-		self.m_button3 = buttons.GenBitmapTextButton(self.m_panel7, -1, bmp, u"占用度分析",style=wx.NO_BORDER)#位图文本按钮
-		self.m_button3.SetUseFocusIndicator(False)
-		self.bSizer11.Add( self.m_button3, 0, wx.ALL, 5 )
-		self.m_panel7.SetSizer( self.bSizer11 )
-		self.m_panel7.Layout()
-		self.bSizer11.Fit( self.m_panel7 )
-		self.bSizer8.Add( self.m_panel7, 1, wx.EXPAND, 5 )
-		self.m_staticline3 = wx.StaticLine( self.m_panel3, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.LI_HORIZONTAL )
-		self.bSizer8.Add( self.m_staticline3, 0, wx.EXPAND |wx.ALL, 0 )
-		
-		
-		#panel8 bSizer12
-		#self.m_button4 = wx.Button( self, wx.ID_ANY, u"无线电测向", wx.DefaultPosition, wx.DefaultSize, 0 )
-		#self.bSizer2.Add( self.m_button4, 0, wx.ALL, 5 )
-		
-		self.m_panel8 = wx.Panel( self.m_panel3, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
-		self.m_panel8.SetBackgroundColour(self.buttom_color)
-		self.bSizer12 = wx.BoxSizer( wx.VERTICAL )
-		self.m_button4 = buttons.GenBitmapTextButton(self.m_panel8, -1, bmp, u"无线电测向",style=wx.NO_BORDER)#位图文本按钮
-		self.m_button4.SetUseFocusIndicator(False)
-		self.bSizer12.Add( self.m_button4, 0, wx.ALL, 5 )
-		self.m_panel8.SetSizer( self.bSizer12 )
-		self.m_panel8.Layout()
-		self.bSizer12.Fit( self.m_panel8 )
-		self.bSizer8.Add( self.m_panel8, 1, wx.EXPAND, 5 )
-		self.m_staticline4 = wx.StaticLine( self.m_panel3, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.LI_HORIZONTAL )
-		self.bSizer8.Add( self.m_staticline4, 0, wx.EXPAND |wx.ALL, 0 )
-		
-		
-		#panel9 bSizer13
-		#self.m_button5 = wx.Button( self, wx.ID_ANY, u"无人机信号", wx.DefaultPosition, wx.DefaultSize, 0 )
-		#self.bSizer2.Add( self.m_button5, 0, wx.ALL, 5 )
-		
-		self.m_panel9 = wx.Panel( self.m_panel3, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
-		self.m_panel9.SetBackgroundColour(self.buttom_color)
-		self.bSizer13 = wx.BoxSizer( wx.VERTICAL )
-		self.m_button5 = buttons.GenBitmapTextButton(self.m_panel9, -1, bmp, u"无人机信号",style=wx.NO_BORDER)#位图文本按钮
-		self.m_button5.SetUseFocusIndicator(False)
-		self.bSizer13.Add( self.m_button5, 0, wx.ALL, 5 )
-		self.m_panel9.SetSizer( self.bSizer13 )
-		self.m_panel9.Layout()
-		self.bSizer13.Fit( self.m_panel9 )
-		self.bSizer8.Add( self.m_panel9, 1, wx.EXPAND, 5 )
-		self.m_staticline5 = wx.StaticLine( self.m_panel3, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.LI_HORIZONTAL )
-		self.bSizer8.Add( self.m_staticline5, 0, wx.EXPAND |wx.ALL, 0 )
-		
-		# self.m_staticline1 = wx.StaticLine( self, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.LI_HORIZONTAL )
-		# self.bSizer2.Add( self.m_staticline1, 0, wx.EXPAND |wx.ALL, 0 )
-		
-		#panel10 bSizer14
-		#self.m_button6 = wx.Button( self, wx.ID_ANY, u"导入显示", wx.DefaultPosition, wx.DefaultSize, 0 )
-		#self.bSizer2.Add( self.m_button6, 0, wx.ALL, 5 )
-		
-		##############################################################去掉导入显示
-		'''
-		'''
-		# self.m_panel10 = wx.Panel( self.m_panel3, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
-		# self.m_panel10.SetBackgroundColour(self.buttom_color)
-		# self.bSizer14 = wx.BoxSizer( wx.VERTICAL )
-		# self.m_button6 = buttons.GenBitmapTextButton(self.m_panel10, -1, bmp, u"导入显示  ",style=wx.NO_BORDER)#位图文本按钮
-		# self.m_button6.SetUseFocusIndicator(False)
-		# self.bSizer14.Add( self.m_button6, 0, wx.ALL, 5 )
-		# self.m_panel10.SetSizer( self.bSizer14 )
-		# self.m_panel10.Layout()
-		# self.bSizer14.Fit( self.m_panel10 )
-		# self.bSizer8.Add( self.m_panel10, 1, wx.EXPAND, 5 )
-		# self.m_staticline6 = wx.StaticLine( self.m_panel3, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.LI_HORIZONTAL )
-		# self.bSizer8.Add( self.m_staticline6, 0, wx.EXPAND |wx.ALL, 0 )
-		
-		# #panel11 bSizer15
-		# #self.m_button7 = wx.Button( self, wx.ID_ANY, u"停止导入", wx.DefaultPosition, wx.DefaultSize, 0 )
-		# #self.bSizer2.Add( self.m_button7, 0, wx.ALL, 5 )
-		
-		# self.m_panel11 = wx.Panel( self.m_panel3, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
-		# self.m_panel11.SetBackgroundColour(self.buttom_color)
-		# self.bSizer15 = wx.BoxSizer( wx.VERTICAL )
-		# self.m_button7 = buttons.GenBitmapTextButton(self.m_panel11, -1, bmp, u"停止导入  ",style=wx.NO_BORDER)#位图文本按钮
-		# self.m_button7.SetUseFocusIndicator(False)
-		# self.bSizer15.Add( self.m_button7, 0, wx.ALL, 5 )
-		# self.m_panel11.SetSizer( self.bSizer15 )
-		# self.m_panel11.Layout()
-		# self.bSizer15.Fit( self.m_panel11 )
-		# self.bSizer8.Add( self.m_panel11, 1, wx.EXPAND, 5 )
-		# self.m_staticline7 = wx.StaticLine( self.m_panel3, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.LI_HORIZONTAL )
-		# self.bSizer8.Add( self.m_staticline7, 0, wx.EXPAND |wx.ALL, 0 )
-		'''
-		##############################################################END
-		
-		'''
-		#panel12
-		self.m_panel12 = wx.Panel( self.m_panel3, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
-		self.bSizer8.Add( self.m_panel12, 8, wx.EXPAND |wx.ALL, 5 )
-		
-		
-		self.m_panel3.SetSizer( self.bSizer8 )
-		self.m_panel3.Layout()
-		self.bSizer8.Fit( self.m_panel3 )
-		self.bSizer2.Add( self.m_panel3, 1, wx.EXPAND, 5 )
-		
-		
-		self.bSizer1.Add( self.bSizer2, 1, wx.EXPAND, 5 )
-		'''
-		
 		
 		
 		self.panelOne = MyPanel1(self)
@@ -5507,7 +5397,9 @@ class MyFrame1 ( wx.Frame ):
 				rsa_true=self.rsa
 				deviceSerial_true=self.message[1]
 				connect_state=1
-				servicedid,freqname,freqrange_list = method.read_service(method.conn_str2)
+				#servicedid,freqname,freqrange_list = method.read_service(method.conn_str2)
+				method.month_freq_list,method.month_freq_str = method.read_month_freq_list()
+				freqrange_list = method.month_freq_str
 				self.panelOne.panelOne_two.choice1.SetItems(freqrange_list)
 				self.panelOne.panelOne_two.choice1.SetSelection(0)
 		except Exception as e:
@@ -5582,25 +5474,29 @@ class MyFrame1 ( wx.Frame ):
 			except (ValueError,TypeError) as e:
 				wx.MessageBox(u' VBW输入须为数值', "Message" ,wx.OK | wx.ICON_INFORMATION)
 				return
-			try:
-				config_data['step_freq']=float(value[4])
-			except (ValueError,TypeError) as e:
-				wx.MessageBox(u' 频率步进输入须为数值', "Message" ,wx.OK | wx.ICON_INFORMATION)
-				return	
+			# try:
+				# config_data['step_freq']=float(value[4])
+			# except (ValueError,TypeError) as e:
+				# wx.MessageBox(u' 频率步进输入须为数值', "Message" ,wx.OK | wx.ICON_INFORMATION)
+				# return	
 			try:
 				config_data['trigger_level']=float(value[5])
 			except (ValueError,TypeError) as e:
 				wx.MessageBox(u' 触发电平输入须为数值', "Message" ,wx.OK | wx.ICON_INFORMATION)
 				return
 			try:
-				config_data['Antenna_level']=float(value[9])
+				config_data['month_start_freq']=float(value[8])
 			except (ValueError,TypeError) as e:
-				wx.MessageBox(u' 天线增益输入须为数值', "Message" ,wx.OK | wx.ICON_INFORMATION)
+				wx.MessageBox(u' 输入频率须为数值', "Message" ,wx.OK | wx.ICON_INFORMATION)
+				return
+			try:
+				config_data['month_end_freq']=float(value[9])
+			except (ValueError,TypeError) as e:
+				wx.MessageBox(u' 输入频率须为数值', "Message" ,wx.OK | wx.ICON_INFORMATION)
 				return
 				
 			config_data['Spec_dir']=value[6]
 			config_data['IQ_dir']=value[7]
-			config_data['Antenna_number']=value[8]
 			
 			##################存数据库参数
 			mysql_value=a.get_mysql_value()
@@ -5625,6 +5521,12 @@ class MyFrame1 ( wx.Frame ):
 			
 			
 		a.Destroy()
+
+	def station_data_update(self,event):
+		try:
+			method.station_info_update()
+		except:
+			wx.MessageBox('本地台站数据更新失败.', "Error" ,wx.OK | wx.ICON_ERROR)
 	
 	def Detection1(self,event):
 		print ("Loading...")
@@ -5642,6 +5544,8 @@ class MyFrame1 ( wx.Frame ):
 		work_state=1
 
 	def Detection2(self,event):
+		global mon_or_real
+		mon_or_real = 1
 		print ("Loading...")
 		self.panelOne.Hide()
 		self.panelTwo.Hide()
@@ -5655,7 +5559,6 @@ class MyFrame1 ( wx.Frame ):
 		# self.m_menubar1.Enable(self.ID_SpecDir, False) 
 		# self.m_menubar1.Enable(self.ID_IQDir, False) 
 		work_state=1
-
 	def Data_input1(self):   ####注释掉
 		global work_state
 		self.m_menubar1.Enable(self.ID_SpecDir, True) 
@@ -5702,7 +5605,6 @@ class MyFrame1 ( wx.Frame ):
 			initial_value4=self.panelThree.m_slider12.GetValue()
 			self.panelThree.initial_freq4=self.panelThree.start_freq+(self.panelThree.end_freq-self.panelThree.start_freq)*initial_value4//100
 			self.panelThree.m_staticText126.SetLabel(str(self.panelThree.initial_freq4/1e6)+'MHz')
-		
 		
 	def OnPaint(self, event):
 		dc = wx.PaintDC(self)
