@@ -41,6 +41,8 @@ class method1:
 	def read_config(self):
 		with open(os.getcwd()+'\\wxpython.json','r') as data:
 			config_data = json.load(data)
+		if config_data['Spec_dir']=='':
+			config_data['Spec_dir']=os.getcwd()+"\\data1"
 		return config_data
 	
 	#读取月报频率段
@@ -740,184 +742,6 @@ class method1:
 		return head,data1,Sub_cf_channel,Sub_span,Sub_cf,Sub_band,Sub_peak,Sub_Spectrum,Sub_Spectrum2,freq, traceData,point,point_xy,num_signal,Sub_illegal,Sub_type
 	# 返回原始的频谱数据
 
-	# 一次细扫，扫每一个方框的信号；输入参数：起始频率、终止频率、任务名称，方框编号，计数、细扫的时间
-	def spectrum0(self,rsa300,startFreq, stopFreq, str_time, k, count, str_tt1, str_tt2,longitude,latitude,rbw,vbw):
-		# create Spectrum_Settings data structure
-
-		class Spectrum_Settings(Structure):
-			_fields_ = [('span', c_double),
-						('rbw', c_double),
-						('enableVBW', c_bool),
-						('vbw', c_double),
-						('traceLength', c_int),
-						('window', c_int),
-						('verticalUnit', c_int),
-						('actualStartFreq', c_double),
-						('actualStopFreq', c_double),
-						('actualFreqStepSize', c_double),
-						('actualRBW', c_double),
-						('actualVBW', c_double),
-						('actualNumIQSamples', c_double)]
-
-		# initialize variables
-		specSet = Spectrum_Settings()
-		longArray = c_long * 10
-		deviceIDs = longArray()
-		deviceSerial = c_wchar_p('')
-		numFound = c_int(0)
-		enable = c_bool(True)  # spectrum enable
-		# cf = c_double(9e8)            #center freq
-		refLevel = c_double(0)  # ref level
-		ready = c_bool(False)  # ready
-		timeoutMsec = c_int(500)  # timeout
-		trace = c_int(0)  # select Trace 1
-		detector = c_int(0)  # set detector type to max
-		# 由起始频率和终止频率直接可以得到中心频率
-		# set cf
-		cf = c_double((startFreq + stopFreq) / 2)
-		'''
-		# search the USB 3.0 bus for an RSA306
-		ret = rsa300.Search(deviceIDs, byref(deviceSerial), byref(numFound))
-		if ret != 0:
-			print('Error in Search: ' + str(ret))
-		if numFound.value < 1:
-			print('No instruments found. Exiting script.')
-			exit()
-		elif numFound.value == 1:
-			print('One device found.')
-			print('Device Serial Number: ' + deviceSerial.value)
-		else:
-			print('2 or more instruments found.')
-			# note: the API can only currently access one at a time
-
-		# connect to the first RSA306
-		ret = rsa300.Connect(deviceIDs[0])
-		if ret != 0:
-			print('Error in Connect: ' + str(ret))
-	'''
-		# preset the RSA306 and configure spectrum settings
-		rsa300.Preset()
-		rsa300.SetCenterFreq(cf)
-		rsa300.SetReferenceLevel(refLevel)
-		rsa300.SPECTRUM_SetEnable(enable)
-		rsa300.SPECTRUM_SetDefault()
-		rsa300.SPECTRUM_GetSettings(byref(specSet))
-
-		# configure desired spectrum settings
-		# some fields are left blank because the default
-		# values set by SPECTRUM_SetDefault() are acceptable
-		span = c_double(stopFreq - startFreq)
-		specSet.span = span
-		specSet.rbw = c_double(rbw)
-		# specSet.vbw = c_double(vbw)
-		specSet.enableVBW = c_bool(True)
-		specSet.vbw = c_double(vbw)
-		specSet.traceLength = c_int(801)  # c_int(int(span.value/step_size.value))#c_int(801)
-		# specSet.window =
-		specSet.verticalUnit = c_int(4)
-		specSet.actualStartFreq = startFreq
-		specSet.actualStopFreq = stopFreq
-		specSet.actualFreqStepSize = c_double(
-			span.value / 801)  # step_size c_double(span.value/801)   # c_double(50000.0)
-		specSet.detector = detector
-		# specSet.actualRBW =
-		# specSet.actualVBW =
-		# specSet.actualNumIQSamples =
-
-		# set desired spectrum settings
-		rsa300.SPECTRUM_SetSettings(specSet)
-		rsa300.SPECTRUM_GetSettings(byref(specSet))
-
-		# uncomment this if you want to print out the spectrum settings
-
-		# print out spectrum settings for a sanity check
-		# print('Span: ' + str(specSet.span))
-		# print('RBW: ' + str(specSet.rbw))
-		# print('VBW Enabled: ' + str(specSet.enableVBW))
-		# print('VBW: ' + str(specSet.vbw))
-		# print('Trace Length: ' + str(specSet.traceLength))
-		# print('Window: ' + str(specSet.window))
-		# print('Vertical Unit: ' + str(specSet.verticalUnit))
-		# print('Actual Start Freq: ' + str(specSet.actualStartFreq))
-		# print('Actual End Freq: ' + str(specSet.actualStopFreq))
-		# print('Actual Freq Step Size: ' + str(specSet.actualFreqStepSize))
-		# print('Actual RBW: ' + str(specSet.actualRBW))
-		# print('Actual VBW: ' + str(specSet.actualVBW))
-
-		# initialize variables for GetTrace
-		traceArray = c_float * specSet.traceLength
-		traceData = traceArray()
-		outTracePoints = c_int()
-
-		# generate frequency array for plotting the spectrum
-		freq = np.arange(specSet.actualStartFreq,
-						 specSet.actualStartFreq + specSet.actualFreqStepSize * specSet.traceLength,
-						 specSet.actualFreqStepSize)
-
-		# start acquisition
-		rsa300.Run()
-		while ready.value == False:
-			rsa300.SPECTRUM_WaitForDataReady(timeoutMsec, byref(ready))
-
-		rsa300.SPECTRUM_GetTrace(c_int(0), specSet.traceLength,
-								 byref(traceData), byref(outTracePoints))
-		# print('Got trace data.')
-
-		# convert trace data from a ctypes array to a numpy array
-		trace = np.ctypeslib.as_array(traceData)
-
-		# Peak power and frequency calculations
-		peakPower = np.amax(trace)
-		peakPowerFreq = freq[np.argmax(trace)]
-		# print('Peak power in spectrum: %4.3f dBmV @ %d Hz' % (peakPower, peakPowerFreq))
-
-		# plot the spectrum trace (optional)
-		#draw_Sub_Spectrum,axes_score1=draw_picture(freq, traceData,height=2.5,width=3)
-		#draw_Sub_Spectrum2,axes_score2=draw_picture(freq, traceData,height=4,width=6) #画大图
-		draw_Sub_Spectrum=freq
-		draw_Sub_Spectrum2=trace
-		# axes_score1.set_xlabel('Frequency (Hz)')
-		# axes_score1.set_ylabel('Amplitude (dBmV)')
-		# axes_score1.set_title('SubSpectrum-%s'%k)
-		# plt.show()
-		freq_cf, band = self.bandwidth(peakPower, peakPowerFreq, trace, freq)  # 带宽
-		# 存储细扫描数据
-		# 将时间改成合法文件名形式
-		#print (str_time)
-		if not os.path.exists(os.getcwd()+"\\data1\\%s\\"%str_time):
-			os.mkdir(os.getcwd()+"\\data1\\%s\\"%str_time)
-		path = os.getcwd()+"\\data1\\%s\\" % str_time + str_tt2 + "spectrum%d.csv" % k
-		df0 = DataFrame({
-			'datetime': str_tt1,
-			'frequency': freq,
-			'power': trace
-		})
-		df0.to_csv(
-			path,
-			index=False
-		)
-		'''
-		需要将return的基本数据存在数据库中
-		'''
-		# 获取业务类型写入表中
-		# 需要连接对方数据库
-		#con1 = mdb.connect('localhost', 'root', '17704882970', 'ceshi1')
-		#sql = "select ObjectID from RFBT_Allocation where Spectrum_Start <= %f and Spectrum_Stop >= %f" % (peakPowerFreq,peakPowerFreq)
-		#objectId = pandas.read_sql(sql,con1)  # 获取信号业务类型的种类编号
-
-		#con = mdb.connect('localhost', 'root', 'cdk120803', 'ceshi1')
-		#con=mdb.connect(mysql_config['host'],mysql_config['user'],mysql_config['password'],mysql_config['database'])
-		con = cx_Oracle.Connection(self.conn_str1)
-		with con:
-			# 获取连接的cursor，只有获取了cursor，我们才能进行各种操作
-			cur = con.cursor()
-			cur.execute("INSERT INTO SPECTRUM_IDENTIFIED VALUES('%s', %s, to_date('%s','yyyy-MM-dd hh24:mi:ss'), %s, %s, %s, %s, %s, %s, %s, %s,%s,%s)", [str_time, int(k), str_tt1, float(startFreq), float(stopFreq),float(freq_cf),float(band), int(count),'haha',float(longitude),float(latitude)])
-			cur.close()
-		con.commit()
-		con.close()
-		return band, peakPower, freq_cf,draw_Sub_Spectrum,draw_Sub_Spectrum2
-	# 返回某一方框信号的带宽，中心频率，中心频率峰值,子频谱图
-
 
 	# 绘制实时的无人机频谱图，顺便计算出带宽
 	def uav0(self,rsa300,startFreq,endFreq,average,rbw,vbw):
@@ -1091,7 +915,8 @@ class method1:
 
 
 	def read_file(self,file):
-		path = os.getcwd()+"\\data1\\"+file
+		#path = os.getcwd()+"\\data1\\"+file
+		path = self.config_data['Spec_dir']+"\\"+file
 		file1 = file[:10]+' '+file[11:13]+':'+file[14:16]+':'+file[17:19]
 		file2 = file[21:31]+' '+file[32:34]+':'+file[35:37]+':'+file[38:40]
 		#print (file1)

@@ -1,6 +1,7 @@
 import wx
 import wx.xrc
 import wx.grid
+import wx.html
 import wx.lib.buttons as buttons
 from wx import adv
 import os
@@ -35,6 +36,7 @@ import pymysql as mdb
 import cx_Oracle   #导入oracle
 import threading
 import wx.html2
+import webbrowser as web
 from queue import Queue
 ###################
 import serial
@@ -384,18 +386,21 @@ class WorkerThread(threading.Thread):     #画实时监测信号动态图
 		print (len(panelOne1.Sub_Spectrum))
 		# 获取测试时间,保存原始频谱数据
 		str_time1 = str(datetime.datetime.now().strftime('%F-%H-%M-%S'))  # 结束的准确时间，直接传到数据库中自动转化成datetime格式
-		file_path=os.getcwd()+"\\data1\\%s\\"%(str_time+'--'+str_time1 + ("spectrum%d" % t))
+		#file_path=os.getcwd()+"\\data1\\%s\\"%(str_time+'--'+str_time1 + ("spectrum%d" % t))
+		file_path=method.config_data['Spec_dir']+"\\%s\\"%(str_time+'--'+str_time1 + ("spectrum%d" % t))
 		if not os.path.exists(file_path):
 			os.mkdir(file_path)
 		#存入原始扫描数据，文件名设置
-		path = os.getcwd()+"\\data1\\%s\\"%(str_time+'--'+str_time1 + ("spectrum%d" % t)) + (str_time+'--'+str_time1) + "spectrum%ds.csv" % t  # 频谱数据粗扫描数据存储路径
+		#path = os.getcwd()+"\\data1\\%s\\"%(str_time+'--'+str_time1 + ("spectrum%d" % t)) + (str_time+'--'+str_time1) + "spectrum%ds.csv" % t  # 频谱数据粗扫描数据存储路径
+		path = method.config_data['Spec_dir']+"\\%s\\"%(str_time+'--'+str_time1 + ("spectrum%d" % t)) + (str_time+'--'+str_time1) + "spectrum%ds.csv" % t  # 频谱数据粗扫描数据存储路径
 		trace = DataFrame(trace1,index=range(len(trace1)),columns=head)
 		trace.to_csv(
 			path,
 			index=False
 		)
 		#存入最大信号扫描信号，文件名设置
-		path2 = os.getcwd()+"\\data1\\%s\\"%(str_time+'--'+str_time1 + ("spectrum%d" % t)) + (str_time+'--'+str_time1) + "Max_spectrum%ds.csv" % t  # 频谱数据粗扫描数据存储路径
+		#path2 = os.getcwd()+"\\data1\\%s\\"%(str_time+'--'+str_time1 + ("spectrum%d" % t)) + (str_time+'--'+str_time1) + "Max_spectrum%ds.csv" % t  # 频谱数据粗扫描数据存储路径
+		path2 = method.config_data['Spec_dir']+"\\%s\\"%(str_time+'--'+str_time1 + ("spectrum%d" % t)) + (str_time+'--'+str_time1) + "Max_spectrum%ds.csv" % t  # 频谱数据粗扫描数据存储路径
 		head_new = [head[0]] + ['cf','peak','band']+head[1:]
 		traceMax = DataFrame(Max_Spectrum_trace,index=range(len(Max_Spectrum_trace)),columns=head_new)
 		traceMax.to_csv(
@@ -447,8 +452,10 @@ class WorkerThread2(threading.Thread):    #画无人机动态图线程
 		self._running = True
 
 	def stop(self):
+		global detection_state
 		print ('will be stopped')
 		#self.timeToQuit.set()
+		detection_state = 0
 		self._running = False
 
 	def run(self):#运行一个线程
@@ -802,7 +809,7 @@ class MyPanel1 ( wx.Panel ):
 		self.bx2.SetFont(font)
 		self.sbSizer3 = wx.StaticBoxSizer( self.bx2, wx.VERTICAL )
 		
-		self.m_choices1 = list(reversed(os.listdir(os.getcwd()+'\\data1')))
+		self.m_choices1 = list(reversed(os.listdir(method.config_data['Spec_dir'])))
 		self.choice_Num=len(self.m_choices1)
 		self.m_combo2 = wx.ComboBox( self, wx.ID_ANY, u'请选择文件...',wx.DefaultPosition, (80,20), self.m_choices1, 0 )
 		self.m_combo2.Bind(wx.EVT_COMBOBOX, self.OnCombo)
@@ -943,7 +950,7 @@ class MyPanel1 ( wx.Panel ):
 		global detection_state
 		if detection_state==0:
 			if self.task_name !=0:
-				raw_path=os.getcwd()+'\\data1\\'+self.task_name
+				raw_path=method.config_data['Spec_dir']+'\\'+self.task_name
 				file_all = os.listdir(raw_path)                #找出文件夹中所有数据文件
 				map_maxSpectrum = lambda x:x[40:43]=='Max'
 				file_name = list(filter(map_maxSpectrum,file_all))[0] #匹配出MaxSpectrum 文件
@@ -951,7 +958,6 @@ class MyPanel1 ( wx.Panel ):
 				print (raw_path,file_name)
 				self.start_freq_cu,self.end_freq_cu,self.x_mat,self.y_mat,self.start_time_cu,self.end_time_cu,self.detail_information,self.point,self.label_information=method.importData_cu(self.task_name,file_name,raw_path)
 				self.continue_time=(self.end_time_cu-self.start_time_cu).seconds
-				
 			################################
 				self.t3=WorkerThread3(self,self.start_freq_cu,self.end_freq_cu,self.x_mat,self.y_mat,self.continue_time,self.detail_information)
 				self.threads3.append(self.t3)
@@ -1395,7 +1401,7 @@ class MyPanel1_1 ( wx.Panel ):
 		
 		bSizer29 = wx.BoxSizer( wx.HORIZONTAL )
 		
-		self.m_staticText10 = wx.StaticText( self.panel2, wx.ID_ANY, u" 检测时长： ", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_staticText10 = wx.StaticText( self.panel2, wx.ID_ANY, u" 监测时长： ", wx.DefaultPosition, wx.DefaultSize, 0 )
 		self.m_staticText10.Wrap( -1 )
 		bSizer29.Add( self.m_staticText10, 0, wx.ALIGN_CENTER|wx.ALL, 0 )
 		
@@ -1917,7 +1923,7 @@ class MyPanel1_2 ( wx.Panel ):
 		
 		two_bSizer29 = wx.BoxSizer( wx.HORIZONTAL )
 		
-		self.staticText10 = wx.StaticText( self.panel3, wx.ID_ANY, u" 检测时长： ", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.staticText10 = wx.StaticText( self.panel3, wx.ID_ANY, u" 监测时长： ", wx.DefaultPosition, wx.DefaultSize, 0 )
 		self.staticText10.Wrap( -1 )
 		two_bSizer29.Add( self.staticText10, 0, wx.ALIGN_CENTER|wx.ALL, 0 )
 		
@@ -2368,7 +2374,7 @@ class MyPanel2 ( wx.Panel ):
 		
 		
 		self.bSizer35=wx.BoxSizer(wx.VERTICAL)
-		self.m_choices = list(reversed(os.listdir(os.getcwd()+'\\data1')))
+		self.m_choices = list(reversed(os.listdir(method.config_data['Spec_dir'])))
 		self.choice_Num=len(self.m_choices)
 		self.m_combo1 = wx.ComboBox( self, wx.ID_ANY, u'请选择文件...',wx.DefaultPosition, (100,20), self.m_choices, 0 )
 		self.m_combo1.Bind(wx.EVT_COMBOBOX, self.OnCombo2)
@@ -2821,7 +2827,7 @@ class MyPanel3 ( wx.Panel ):
 		bSizer284 = wx.BoxSizer( wx.VERTICAL )
 		
 		bSizer285=wx.BoxSizer(wx.HORIZONTAL)
-		self.m_choice42Choices = list(reversed(os.listdir(os.getcwd()+'\\data1')))
+		self.m_choice42Choices = list(reversed(os.listdir(method.config_data['Spec_dir'])))
 		self.choice_Num=len(self.m_choice42Choices)
 		self.m_combo1 = wx.ComboBox( self, wx.ID_ANY, u'请选择文件...',wx.DefaultPosition, (300,20), self.m_choice42Choices, 0 )
 		self.m_combo1.Bind(wx.EVT_COMBOBOX, self.OnCombo1)
@@ -3618,43 +3624,47 @@ class MyPanel4 ( wx.Panel ):
 		return [freq,span,rfLevel,rbw,vbw]
 
 	def compute_angel(self,event):
+		global detection_state
 		if connect_state==0:
 			wx.MessageBox('No instruments connected  .', "Error" ,wx.OK | wx.ICON_ERROR)
 		else:
-			angel=self.get_direction()
-			#angel = 100
-			#print (angel)
-			if angel==-2:
-				pass   # 连接错误直接终止
-			elif angel==-1:
-				wx.MessageBox('获取方向失败  .', "Error" ,wx.OK | wx.ICON_ERROR)
+			if detection_state == 0:
+				angel=self.get_direction()
+				#angel = 100
+				#print (angel)
+				if angel==-2:
+					pass   # 连接错误直接终止
+				elif angel==-1:
+					wx.MessageBox('获取方向失败  .', "Error" ,wx.OK | wx.ICON_ERROR)
+				else:
+					input_detail = self.getInput()
+					print (input_detail)
+					if self.input_state == 1:
+						centerFreq = (input_detail[0]+input_detail[1])/2
+						Span = input_detail[1]-input_detail[0]
+						k = 5 #连续扫描多少帧，取最大值
+						self.traceAll = []
+						for i in range(k):
+							peakPower,self.freq,self.traceData=method.find_direction(rsa_true,centerFreq,Span,input_detail[2])
+							self.traceAll.append(self.traceData)
+						self.traceData = max(array(self.traceAll),0).tolist()
+						peakPower = max(self.traceData)
+						print (self.traceData[0])
+						print (self.freq[0],self.freq[-1])
+						#####################将信号峰值显示到表格中
+						i=self.list_ctrl.GetItemCount()
+						self.list_ctrl.InsertItem(i,str(i+1))
+						self.list_ctrl.SetItem(i,1,str(angel))
+						self.list_ctrl.SetItem(i,2,str(peakPower))
+						#self.names['textCtrl%s'%int(angel/10)].SetValue(str(peakPower)+'dBmV')
+						#print (peakPower)
+						self.angel_peak[angel]=10**(peakPower/10)
+						#####################将整帧扫描到的信号显示到坐标轴中
+						self.axesLeft.set_xlim(self.freq[0],self.freq[-1])
+						self.l_userLeft.set_data(self.freq,self.traceData)
+						self.canvasLeft.draw()
 			else:
-				input_detail = self.getInput()
-				print (input_detail)
-				if self.input_state == 1:
-					centerFreq = (input_detail[0]+input_detail[1])/2
-					Span = input_detail[1]-input_detail[0]
-					k = 5 #连续扫描多少帧，取最大值
-					self.traceAll = []
-					for i in range(k):
-						peakPower,self.freq,self.traceData=method.find_direction(rsa_true,centerFreq,Span,input_detail[2])
-						self.traceAll.append(self.traceData)
-					self.traceData = max(array(self.traceAll),0).tolist()
-					peakPower = max(self.traceData)
-					print (self.traceData[0])
-					print (self.freq[0],self.freq[-1])
-					#####################将信号峰值显示到表格中
-					i=self.list_ctrl.GetItemCount()
-					self.list_ctrl.InsertItem(i,str(i+1))
-					self.list_ctrl.SetItem(i,1,str(angel))
-					self.list_ctrl.SetItem(i,2,str(peakPower))
-					#self.names['textCtrl%s'%int(angel/10)].SetValue(str(peakPower)+'dBmV')
-					#print (peakPower)
-					self.angel_peak[angel]=10**(peakPower/10)
-					#####################将整帧扫描到的信号显示到坐标轴中
-					self.axesLeft.set_xlim(self.freq[0],self.freq[-1])
-					self.l_userLeft.set_data(self.freq,self.traceData)
-					self.canvasLeft.draw()
+				wx.MessageBox(u'已处于监测状态，请先停止当前任务，然后开始新的任务', "Message" ,wx.OK | wx.ICON_INFORMATION)
 	
 	def clear_angel(self,event):
 		if connect_state==0:
@@ -4167,47 +4177,56 @@ class MyPanel5 ( wx.Panel ):
 		self.freq_interval=[2400,2460] #默认频率段
 		
 	def start_uav(self,event):
+		global detection_state
 		if connect_state==0:
 			wx.MessageBox('No instruments connected  .', "Error" ,wx.OK | wx.ICON_ERROR)
 		else:
 			#读取rbw
-			rbw=self.m_textCtrl2.GetValue()
-			self.m_choice2_string=self.m_choice2.GetString(self.m_choice2.GetSelection())
-			if rbw.strip()=='':
-				rbw=config_data['RBW']
-				if self.m_choice2_string=='Hz':
-					self.m_textCtrl2.SetValue(str(rbw*(10**3)))
-				else :
-					self.m_textCtrl2.SetValue(str(rbw))
-			else:
+			if detection_state==0:
 				try:
-					rbw=float(rbw)
-					if self.m_choice2_string=='Hz':
-						rbw=rbw/(1e3)
-					if self.m_choice2_string=='kHz':
-						rbw=rbw
-				except (ValueError,TypeError) as e:
-					rbw=config_data['RBW']
-					wx.MessageBox(u' RBW输入须为数值', "Message" ,wx.OK | wx.ICON_INFORMATION)
-			self.rbw = rbw * 1e3
-			
-			self.count+=1
-			t=50*36000
-			# self.peak_freq=Queue()
-			# self.band=Queue()
-			self.I=[]
-			self.Q=[]
-			self.peak_freq_list=[]
-			self.band_list=[]
-			#anteid=config_data['Antenna_number']
-			anteid = method.anteid
-			#self.rbw=config_data['RBW']*1e3
-			self.vbw=config_data['VBW']*1e3
-			self.t2=WorkerThread2(self.count,self,rsa_true,deviceSerial_true,t,13,anteid,self.rbw,self.vbw,self.freq_interval)
-			self.t2.start()
-			self.threads2.append(self.t2)
-			# self.peak_freq_list=self.peak_freq.get()
-			# self.band_list=self.band.get()
+					rbw=self.m_textCtrl2.GetValue()
+					self.m_choice2_string=self.m_choice2.GetString(self.m_choice2.GetSelection())
+					if rbw.strip()=='':
+						rbw=config_data['RBW']
+						if self.m_choice2_string=='Hz':
+							self.m_textCtrl2.SetValue(str(rbw*(10**3)))
+						else :
+							self.m_textCtrl2.SetValue(str(rbw))
+					else:
+						try:
+							rbw=float(rbw)
+							if self.m_choice2_string=='Hz':
+								rbw=rbw/(1e3)
+							if self.m_choice2_string=='kHz':
+								rbw=rbw
+						except (ValueError,TypeError) as e:
+							rbw=config_data['RBW']
+							wx.MessageBox(u' RBW输入须为数值', "Message" ,wx.OK | wx.ICON_INFORMATION)
+					self.rbw = rbw * 1e3
+					
+					self.count+=1
+					t=50*36000
+					# self.peak_freq=Queue()
+					# self.band=Queue()
+					self.I=[]
+					self.Q=[]
+					self.peak_freq_list=[]
+					self.band_list=[]
+					#anteid=config_data['Antenna_number']
+					anteid = method.anteid
+					#self.rbw=config_data['RBW']*1e3
+					self.vbw=config_data['VBW']*1e3
+					detection_state = 1
+					self.t2=WorkerThread2(self.count,self,rsa_true,deviceSerial_true,t,13,anteid,self.rbw,self.vbw,self.freq_interval)
+					self.t2.start()
+					self.threads2.append(self.t2)
+					# self.peak_freq_list=self.peak_freq.get()
+					# self.band_list=self.band.get()
+				except:
+					wx.MessageBox(u'无人机监测出现错误，请重新开始', "Message" ,wx.OK | wx.ICON_INFORMATION)
+					detection_state = 0
+			else:
+				wx.MessageBox(u'已处于监测状态，请先停止当前任务，然后开始新的任务', "Message" ,wx.OK | wx.ICON_INFORMATION)
 			
 			
 	def stop_uav(self,event):
@@ -4424,7 +4443,7 @@ class MyPanel7( wx.Panel):
 		bmp5 = wx.Image("button115.bmp", wx.BITMAP_TYPE_BMP).ConvertToBitmap()
 		'''
 		
-		self.m_bpButton1 = buttons.GenBitmapTextButton(self.m_panel1, -1, bmp, u"月报监测  ",(150,220),(300,100),style=wx.NO_BORDER)#位图文本按钮
+		self.m_bpButton1 = buttons.GenBitmapTextButton(self.m_panel1, -1, bmp, u"月报监测  ",(140,140),(280,280),style=wx.NO_BORDER)#位图文本按钮
 		self.m_bpButton1.SetUseFocusIndicator(False)
 		font = wx.Font(30, wx.DECORATIVE,wx.NORMAL,wx.BOLD)
 		self.m_bpButton1.SetFont(font)
@@ -4432,56 +4451,20 @@ class MyPanel7( wx.Panel):
 		#self.m_bpButton1 = wx.BitmapButton( self.m_panel1, wx.ID_ANY, bmp1, (120,140),wx.DefaultSize, wx.BU_AUTODRAW )
 		#bSizer5.Add( self.m_bpButton1, 0, wx.ALL, 5 )
 		
-		self.m_bpButton2 = buttons.GenBitmapTextButton(self.m_panel1, -1, bmp, u"实时监测  ",(570,220),(300,100),style=wx.NO_BORDER)#位图文本按钮
+		self.m_bpButton2 = buttons.GenBitmapTextButton(self.m_panel1, -1, bmp, u"实时频谱监测  ",(510,130),(360,120),style=wx.NO_BORDER)#位图文本按钮
 		self.m_bpButton2.SetUseFocusIndicator(False)
 		font = wx.Font(30, wx.DECORATIVE,wx.NORMAL,wx.BOLD)
 		self.m_bpButton2.SetFont(font)
 		self.m_bpButton2.SetBackgroundColour("SKY BLUE")
-		#self.m_bpButton2 = wx.BitmapButton( self.m_panel1, wx.ID_ANY, bmp2, (380,140),wx.DefaultSize, wx.BU_AUTODRAW )
-		#bSizer5.Add( self.m_bpButton2, 0, wx.ALL, 5 )
+		
+		self.m_bpButton3 = buttons.GenBitmapTextButton(self.m_panel1, -1, bmp, u"实时信号监测  ",(510,300),(360,120),style=wx.NO_BORDER)#位图文本按钮
+		self.m_bpButton3.SetUseFocusIndicator(False)
+		font = wx.Font(30, wx.DECORATIVE,wx.NORMAL,wx.BOLD)
+		self.m_bpButton3.SetFont(font)
+		self.m_bpButton3.SetBackgroundColour("SKY BLUE")
 		
 		
-		# bSizer4.Add( bSizer5, 1, wx.ALIGN_CENTER_HORIZONTAL|wx.ALL, 5 )
-		
-		# bSizer6 = wx.BoxSizer( wx.HORIZONTAL )
-		
-		# self.m_bpButton3 = buttons.GenBitmapTextButton(self.m_panel1, -1, bmp, u"占用度分析 ",(120,360),wx.DefaultSize,style=wx.NO_BORDER)#位图文本按钮
-		# self.m_bpButton3.SetUseFocusIndicator(False)
-		# font = wx.Font(20, wx.DECORATIVE,wx.NORMAL,wx.BOLD)
-		# self.m_bpButton3.SetFont(font)
-		# self.m_bpButton3.SetBackgroundColour("AQUAMARINE")
-		#self.m_bpButton3 = wx.BitmapButton( self.m_panel1, wx.ID_ANY, bmp3, (120,390),wx.DefaultSize, wx.BU_AUTODRAW )
-		#bSizer6.Add( self.m_bpButton3, 0, wx.ALL, 5 )
-		
-		# self.m_bpButton4 = buttons.GenBitmapTextButton(self.m_panel1, -1, bmp, u"无线测向  ",(380,360),wx.DefaultSize,style=wx.NO_BORDER)#位图文本按钮
-		# self.m_bpButton4.SetUseFocusIndicator(False)
-		# font = wx.Font(20, wx.DECORATIVE,wx.NORMAL,wx.BOLD)
-		# self.m_bpButton4.SetFont(font)
-		# self.m_bpButton4.SetBackgroundColour("AQUAMARINE")
-		#self.m_bpButton4 = wx.BitmapButton( self.m_panel1, wx.ID_ANY, bmp4, (380,390),wx.DefaultSize, wx.BU_AUTODRAW )
-		# bSizer6.Add( self.m_bpButton4, 0, wx.ALL, 5 )
-		
-		# self.m_bpButton5 = buttons.GenBitmapTextButton(self.m_panel1, -1, bmp, u"无人机信号 ",(640,220),wx.DefaultSize,style=wx.NO_BORDER)#位图文本按钮
-		# self.m_bpButton5.SetUseFocusIndicator(False)
-		# font = wx.Font(20, wx.DECORATIVE,wx.NORMAL,wx.BOLD)
-		# self.m_bpButton5.SetFont(font)
-		# self.m_bpButton5.SetBackgroundColour("AQUAMARINE")
-		#self.m_bpButton5 = wx.BitmapButton( self.m_panel1, wx.ID_ANY, bmp5, (640,140),wx.DefaultSize, wx.BU_AUTODRAW )
-		# bSizer4.Add( bSizer6, 1, wx.ALIGN_CENTER_HORIZONTAL|wx.ALL, 5 )
-		
-		# self.m_panel2 = wx.Panel( self.m_panel1, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
-		# bSizer4.Add( self.m_panel2, 1, wx.EXPAND |wx.ALL, 5 )
-		
-		
-		# bSizer2.Add( bSizer4, 3, wx.EXPAND, 5 )
-		
-		
-		# self.m_panel1.SetSizer( bSizer2 )
-		# self.m_panel1.Layout()
-		# bSizer2.Fit( self.m_panel1 )
 		bSizer1.Add( self.m_panel1, 1, wx.EXPAND |wx.ALL, 5 )
-		
-		
 		self.SetSizer( bSizer1 )
 		self.Layout()
 		
@@ -4867,8 +4850,7 @@ class MyDialog1 ( wx.Dialog ):
 ###########################################################################
 class MyFrame1 ( wx.Frame ):
 	def __init__( self, parent ):
-		wx.Frame.__init__ ( self, parent, id = wx.ID_ANY, title = u"无线电监测分析与测向软件", pos = wx.DefaultPosition, size = wx.Size( 1026,730 ), style = wx.MINIMIZE_BOX|wx.RESIZE_BORDER|wx.SYSTEM_MENU|wx.CAPTION|wx.CLOSE_BOX|wx.CLIP_CHILDREN|wx.TAB_TRAVERSAL )
-		
+		wx.Frame.__init__ ( self, parent, id = wx.ID_ANY, title = u"无线电监测分析与测向软件", pos = wx.DefaultPosition, size = wx.Size( 1026,730 ), style = wx.MINIMIZE_BOX|wx.SYSTEM_MENU|wx.CAPTION|wx.CLOSE_BOX|wx.CLIP_CHILDREN|wx.TAB_TRAVERSAL )
 		'''
 		# #改变注册表，使得python 默认的ie版本为ie11,只有高版本的ie才能在地图上加线条，箭头
 		# self.key = winreg.OpenKey(winreg.HKEY_CURRENT_USER, 
@@ -4891,29 +4873,24 @@ class MyFrame1 ( wx.Frame ):
 		#self.m_statusBar1 = self.CreateStatusBar( 1, wx.ST_SIZEGRIP, wx.ID_ANY )
 		self.m_menubar1 = wx.MenuBar( 0 )
 		self.m_menu1 = wx.Menu()
-		Detection_main=self.m_menu1.Append(-1, "主模块选择")
-		Detection_selfDefined=self.m_menu1.Append(-1,'实时监测模块')
-		#self.Data_input=self.m_menu1.AppendRadioItem(-1, "数据导入")
-		self.m_menubar1.Append( self.m_menu1, u"功能模块" )
-		self.Bind(wx.EVT_MENU, self.Detection1, Detection_main)
-		self.Bind(wx.EVT_MENU, self.Detection2, Detection_selfDefined)
-		#self.Bind(wx.EVT_MENU,self.Data_input1,self.Data_input)
-		#self.state_Detection=self.Detection.IsChecked()
-		#self.state_Data_input=self.Data_input.IsChecked()
-
-		'''
-		self.m_menu2 = wx.Menu()
-		self.select_SpecDir=self.m_menu2.Append(-1, "频谱数据选择")
-		self.select_IQDir=self.m_menu2.Append(-1, "IQ数据选择")
-		self.m_menubar1.Append( self.m_menu2, u"数据导入选择" ) 
-		self.ID_SpecDir=self.select_SpecDir.GetId()
-		self.ID_IQDir=self.select_IQDir.GetId()
-		self.m_menubar1.Enable(self.ID_SpecDir, False) 
-		self.m_menubar1.Enable(self.ID_IQDir, False) 
-		self.Bind(wx.EVT_MENU, self.Select_Spectrum_Dir, self.select_SpecDir)
-		self.Bind(wx.EVT_MENU, self.Select_IQ_Dir, self.select_IQDir)
-		'''
+		module_select = wx.Menu()
+		month_monitor = module_select.Append(-1,"月报监测")
+		free_monitor = wx.Menu()
+		free_spectrum = free_monitor.Append(-1,"自定义监测")
+		airplane_spectrum = free_monitor.Append(-1,"无人机监测")
+		spectrum_occupancy = free_monitor.Append(-1,"信号占用度")
+		signal_direction = free_monitor.Append(-1,"信号侧向")
 		
+		module_select.Append(wx.ID_ANY,"自由监测",free_monitor)
+		self.m_menu1.Append(wx.ID_ANY,"模块选择",module_select)
+		
+		self.Bind(wx.EVT_MENU, self.switch_to_monReport, month_monitor)
+		self.Bind(wx.EVT_MENU, self.switch_to_spectrum, free_spectrum)
+		self.Bind(wx.EVT_MENU, self.switch_to_UAV, airplane_spectrum)
+		self.Bind(wx.EVT_MENU, self.switch_to_occupancy,spectrum_occupancy)
+		self.Bind(wx.EVT_MENU, self.switch_to_radio, signal_direction)
+		
+		self.m_menubar1.Append( self.m_menu1, u"功能模块" )
 		
 		self.m_menu3 = wx.Menu()
 		config=self.m_menu3.Append(-1,u"默认参数设置")
@@ -4937,9 +4914,31 @@ class MyFrame1 ( wx.Frame ):
 		self.Bind(wx.EVT_MENU,self.disconnect,disConnect)
 		
 		self.m_menu5 = wx.Menu()
+		self.helpTxt = self.m_menu5.Append( -1, u"帮助文档")
 		self.m_menubar1.Append( self.m_menu5, u"帮助" ) 
+		self.Bind(wx.EVT_MENU,self.get_help_txt,self.helpTxt)
 		
 		self.SetMenuBar( self.m_menubar1 )
+		
+		'''
+		toolbar = self.CreateToolBar()
+		month_monitor_tool = toolbar.AddTool(wx.ID_ANY,"Quit",wx.Bitmap("toolbar.ico"))
+		free_spectrum_tool = toolbar.AddTool(wx.ID_ANY,"Quit",wx.Bitmap("toolbar.ico"))
+		airplane_spectrum_tool = toolbar.AddTool(wx.ID_ANY,"Quit",wx.Bitmap("toolbar.ico"))
+		spectrum_occupancy_tool = toolbar.AddTool(wx.ID_ANY,"Quit",wx.Bitmap("toolbar.ico"))
+		signal_direction_tool = toolbar.AddTool(wx.ID_ANY,"Quit",wx.Bitmap("toolbar.ico"))
+		Connect_tool = toolbar.AddTool(wx.ID_ANY,"Quit",wx.Bitmap("toolbar.ico"))
+		disConnect_tool = toolbar.AddTool(wx.ID_ANY,"Quit",wx.Bitmap("toolbar.ico"))
+		toolbar.Realize()
+		
+		self.Bind(wx.EVT_MENU, self.switch_to_monReport, month_monitor_tool)
+		self.Bind(wx.EVT_MENU, self.switch_to_spectrum, free_spectrum_tool)
+		self.Bind(wx.EVT_MENU, self.switch_to_UAV, airplane_spectrum_tool)
+		self.Bind(wx.EVT_MENU, self.switch_to_occupancy,spectrum_occupancy_tool)
+		self.Bind(wx.EVT_MENU, self.switch_to_radio, signal_direction_tool)
+		self.Bind(wx.EVT_MENU,self.connect,Connect_tool)
+		self.Bind(wx.EVT_MENU,self.disconnect,disConnect_tool)
+		'''
 		
 		self.mainSizer=wx.BoxSizer( wx.VERTICAL )
 		
@@ -5037,6 +5036,7 @@ class MyFrame1 ( wx.Frame ):
 		self.panelSix.m_bpButton5.Bind( wx.EVT_BUTTON, self.switch_to_UAV )
 		self.panelSeven.m_bpButton1.Bind( wx.EVT_BUTTON, self.switch_to_monReport )
 		self.panelSeven.m_bpButton2.Bind( wx.EVT_BUTTON, self.switch_to_real_time_report )
+		self.panelSeven.m_bpButton3.Bind( wx.EVT_BUTTON, self.openTek )
 		#self.m_button6.Bind( wx.EVT_BUTTON, self.data_import_show )
 		#self.m_button7.Bind( wx.EVT_BUTTON, self.stop_import_show )
 		self.Bind(wx.EVT_CLOSE, self.OnClose)
@@ -5497,6 +5497,7 @@ class MyFrame1 ( wx.Frame ):
 				
 			config_data['Spec_dir']=value[6]
 			config_data['IQ_dir']=value[7]
+			method.config_data = config_data
 			
 			##################存数据库参数
 			mysql_value=a.get_mysql_value()
@@ -5559,11 +5560,22 @@ class MyFrame1 ( wx.Frame ):
 		# self.m_menubar1.Enable(self.ID_SpecDir, False) 
 		# self.m_menubar1.Enable(self.ID_IQDir, False) 
 		work_state=1
+
 	def Data_input1(self):   ####注释掉
 		global work_state
 		self.m_menubar1.Enable(self.ID_SpecDir, True) 
 		self.m_menubar1.Enable(self.ID_IQDir, True) 
 		work_state=0
+		
+	def get_help_txt(self,event):
+		print ('get html')
+		filepath = 'file:///' + os.getcwd() + '/help.html'
+		filepath = filepath.replace('\\' , '/')
+		print (filepath)
+		web.open_new_tab(filepath)
+	
+	def openTek(self, event):
+		os.system("F:\QQmusic\QQMusic1582.20.36.32\QQMusic.exe")
 
 	def OnClose(self,event):
 		#wx.Exit()
@@ -5583,7 +5595,7 @@ class MyFrame1 ( wx.Frame ):
 		#wx.GetApp().ExitMainLoop()
 
 	def onTimer(self, evt):
-		self.panelThree.m_choice42Choices = os.listdir(os.getcwd()+'\\data1')
+		self.panelThree.m_choice42Choices = os.listdir(method.config_data['Spec_dir'])
 		if self.panelThree.choice_Num!=len(self.panelThree.m_choice42Choices):
 			self.panelThree.choice_Num=len(self.panelThree.m_choice42Choices)
 			self.panelThree.m_combo1.SetItems(self.panelThree.m_choice42Choices)
