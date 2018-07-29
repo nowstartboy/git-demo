@@ -154,6 +154,32 @@ class method1:
 			mysql_config=json.load(data)
 		return mysql_config
 
+	def file_to_list(self, file_name):
+		new_l = []
+		for i in file_name:
+			temp = i[:40]
+			str1=temp[:19]
+			str2=temp[21:]
+			time_start = i.index('m')+1
+			str1_1 = "{year}{month}{day}".format(year=str1[:4],month=str1[5:7],day=str1[8:10])
+			str2_1 = "{year}{month}{day}".format(year=str2[:4],month=str2[5:7],day=str2[8:10])
+			result = str1_1+' '+ str1[11:].replace('-',':') + '--' + str2_1 + ' ' + str2[11:].replace('-',':')+'('+i[time_start:]+')'
+			new_l.append(result)
+		return new_l
+		
+	def list_to_file(self, str_file):
+		str_file = str_file.replace(':','-')
+		str_file = str_file.replace(' ','-')
+		str_file = list(str_file)
+		str_file.insert(4,'-')
+		str_file.insert(7,'-')
+		str_file.insert(25,'-')
+		str_file.insert(28,'-')
+		index1 = str_file.index('(')
+		index2 = str_file.index(')')
+		num = str_file[index1+1:index2]
+		str1 = ''.join(str_file[:index1])+'spectrum' + ''.join(num)
+		return str1
 	###########################################################################
 	## draw pictures
 	###########################################################################
@@ -213,96 +239,103 @@ class method1:
 	def detectNoise(self,rsa300,startFreq,endFreq,rbw,vbw):
 
 		# create Spectrum_Settings data structure
-		class Spectrum_Settings(Structure):
-			_fields_ = [('span', c_double),
-					('rbw', c_double),
-					('enableVBW', c_bool),
-					('vbw', c_double),
-					('traceLength', c_int),
-					('window', c_int),
-					('verticalUnit', c_int),
-					('actualStartFreq', c_double),
-					('actualStopFreq', c_double),
-					('actualFreqStepSize', c_double),
-					('actualRBW', c_double),
-					('actualVBW', c_double),
-					('actualNumIQSamples', c_double)]
+		try:
+			class Spectrum_Settings(Structure):
+				_fields_ = [('span', c_double),
+						('rbw', c_double),
+						('enableVBW', c_bool),
+						('vbw', c_double),
+						('traceLength', c_int),
+						('window', c_int),
+						('verticalUnit', c_int),
+						('actualStartFreq', c_double),
+						('actualStopFreq', c_double),
+						('actualFreqStepSize', c_double),
+						('actualRBW', c_double),
+						('actualVBW', c_double),
+						('actualNumIQSamples', c_double)]
 
-		# initialize variables
-		specSet = Spectrum_Settings()
-		longArray = c_long * 10
-		deviceIDs = longArray()
-		deviceSerial = c_wchar_p('')
-		numFound = c_int(0)
-		enable = c_bool(True)  # spectrum enable
-		cf = c_double(startFreq+(endFreq-startFreq)/2.0)  # center freq
-		refLevel = c_double(0)  # ref level
-		ready = c_bool(False)  # ready
-		timeoutMsec = c_int(500)  # timeout
-		trace = c_int(0)  # select Trace 1
-		detector = c_int(1)  # set detector type to max
+			# initialize variables
+			specSet = Spectrum_Settings()
+			longArray = c_long * 10
+			deviceIDs = longArray()
+			deviceSerial = c_wchar_p('')
+			numFound = c_int(0)
+			enable = c_bool(True)  # spectrum enable
+			cf = c_double(startFreq+(endFreq-startFreq)/2.0)  # center freq
+			refLevel = c_double(0)  # ref level
+			ready = c_bool(False)  # ready
+			timeoutMsec = c_int(500)  # timeout
+			trace = c_int(0)  # select Trace 1
+			detector = c_int(1)  # set detector type to max
 
-		# preset the RSA306 and configure spectrum settings
-		rsa300.Preset()
-		rsa300.SetCenterFreq(cf)
-		rsa300.SetReferenceLevel(refLevel)
-		rsa300.SPECTRUM_SetEnable(enable)
-		rsa300.SPECTRUM_SetDefault()
-		rsa300.SPECTRUM_GetSettings(byref(specSet))
+			# preset the RSA306 and configure spectrum settings
+			rsa300.Preset()
+			rsa300.SetCenterFreq(cf)
+			rsa300.SetReferenceLevel(refLevel)
+			rsa300.SPECTRUM_SetEnable(enable)
+			rsa300.SPECTRUM_SetDefault()
+			rsa300.SPECTRUM_GetSettings(byref(specSet))
 
-		# configure desired spectrum settings
-		# some fields are left blank because the default
-		# values set by SPECTRUM_SetDefault() are acceptable
-		specSet.span = c_double(endFreq-startFreq)
-		specSet.rbw = c_double(rbw)
-		specSet.enableVBW = c_bool(True)
-		specSet.vbw = c_double(vbw)
-		specSet.traceLength = c_int(801)
-		#specSet.SpectrumVerticalUnits=c_int(4)
-		# specSet.window =
-		specSet.verticalUnit =c_int(4)
-		specSet.actualStartFreq = c_double(0)
-		specSet.actualStopFreq = c_double(40e6)
-		# specSet.actualFreqStepSize =c_double(50000.0)
-		# specSet.actualRBW =
-		# specSet.actualVBW =
-		# specSet.actualNumIQSamples =
+			# configure desired spectrum settings
+			# some fields are left blank because the default
+			# values set by SPECTRUM_SetDefault() are acceptable
+			specSet.span = c_double(endFreq-startFreq)
+			specSet.rbw = c_double(rbw)
+			specSet.enableVBW = c_bool(True)
+			specSet.vbw = c_double(vbw)
+			specSet.traceLength = c_int(801)
+			#specSet.SpectrumVerticalUnits=c_int(4)
+			# specSet.window =
+			specSet.verticalUnit =c_int(4)
+			specSet.actualStartFreq = c_double(0)
+			specSet.actualStopFreq = c_double(40e6)
+			# specSet.actualFreqStepSize =c_double(50000.0)
+			# specSet.actualRBW =
+			# specSet.actualVBW =
+			# specSet.actualNumIQSamples =
 
-		# set desired spectrum settings
-		rsa300.SPECTRUM_SetSettings(specSet)
-		rsa300.SPECTRUM_GetSettings(byref(specSet))
+			# set desired spectrum settings
+			rsa300.SPECTRUM_SetSettings(specSet)
+			rsa300.SPECTRUM_GetSettings(byref(specSet))
 
-		# uncomment this if you want to print out the spectrum settings
+			# uncomment this if you want to print out the spectrum settings
 
 
-		# print out spectrum settings for a sanity check
-		# print('Span: ' + str(specSet.span))
-		# print('RBW: ' + str(specSet.rbw))
-		# print('VBW Enabled: ' + str(specSet.enableVBW))
-		# print('VBW: ' + str(specSet.vbw))
-		# print('Trace Length: ' + str(specSet.traceLength))
-		# print('Window: ' + str(specSet.window))
-		# print('Vertical Unit: ' + str(specSet.verticalUnit))
-		# print('Actual Start Freq: ' + str(specSet.actualStartFreq))
-		# print('Actual End Freq: ' + str(specSet.actualStopFreq))
-		# print('Actual Freq Step Size: ' + str(specSet.actualFreqStepSize))
-		# print('Actual RBW: ' + str(specSet.actualRBW))
-		# print('Actual VBW: ' + str(specSet.actualVBW))
+			# print out spectrum settings for a sanity check
+			# print('Span: ' + str(specSet.span))
+			# print('RBW: ' + str(specSet.rbw))
+			# print('VBW Enabled: ' + str(specSet.enableVBW))
+			# print('VBW: ' + str(specSet.vbw))
+			# print('Trace Length: ' + str(specSet.traceLength))
+			# print('Window: ' + str(specSet.window))
+			# print('Vertical Unit: ' + str(specSet.verticalUnit))
+			# print('Actual Start Freq: ' + str(specSet.actualStartFreq))
+			# print('Actual End Freq: ' + str(specSet.actualStopFreq))
+			# print('Actual Freq Step Size: ' + str(specSet.actualFreqStepSize))
+			# print('Actual RBW: ' + str(specSet.actualRBW))
+			# print('Actual VBW: ' + str(specSet.actualVBW))
 
-		# initialize variables for GetTrace
-		traceArray = c_float * specSet.traceLength
-		traceData = traceArray()
-		outTracePoints = c_int()
+			# initialize variables for GetTrace
+			traceArray = c_float * specSet.traceLength
+			traceData = traceArray()
+			outTracePoints = c_int()
 
-		# generate frequency array for plotting the spectrum
-		freq = np.arange(specSet.actualStartFreq,
-						specSet.actualStartFreq + specSet.actualFreqStepSize * specSet.traceLength,
-						specSet.actualFreqStepSize)
+			# generate frequency array for plotting the spectrum
+			freq = np.arange(specSet.actualStartFreq,
+							specSet.actualStartFreq + specSet.actualFreqStepSize * specSet.traceLength,
+							specSet.actualFreqStepSize)
 
-		# start acquisition
-		rsa300.Run()
+			# start acquisition
+			rsa300.Run()
+		except:
+			return 0
+		t1 = time.time()
 		while ready.value == False:
-		  rsa300.SPECTRUM_WaitForDataReady(timeoutMsec, byref(ready))
+			rsa300.SPECTRUM_WaitForDataReady(timeoutMsec, byref(ready))
+			t2=time.time()
+			if t2-t1>3:
+				return 0
 
 		rsa300.SPECTRUM_GetTrace(c_int(0), specSet.traceLength,
 								byref(traceData), byref(outTracePoints))
@@ -453,101 +486,109 @@ class method1:
 	# 一次扫频参数：噪声均值、起始频率、终止频率、频率跨度、rbw、任务名、计数、某一次扫频的具体时间
 	def spectrum1(self,rsa300,average, startFreq, stopFreq, span, rbw,vbw, str_time, count, str_tt1, str_tt2,longitude,latitude,num_signal,Sub_cf_all):
 		# create Spectrum_Settings data structure
-		class Spectrum_Settings(Structure):
-			_fields_ = [('span', c_double),
-						('rbw', c_double),
-						('enableVBW', c_bool),
-						('vbw', c_double),
-						('traceLength', c_int),
-						('window', c_int),
-						('verticalUnit', c_int),
-						('actualStartFreq', c_double),
-						('actualStopFreq', c_double),
-						('actualFreqStepSize', c_double),
-						('actualRBW', c_double),
-						('actualVBW', c_double),
-						('actualNumIQSamples', c_double)]
+		try:
+			class Spectrum_Settings(Structure):
+				_fields_ = [('span', c_double),
+							('rbw', c_double),
+							('enableVBW', c_bool),
+							('vbw', c_double),
+							('traceLength', c_int),
+							('window', c_int),
+							('verticalUnit', c_int),
+							('actualStartFreq', c_double),
+							('actualStopFreq', c_double),
+							('actualFreqStepSize', c_double),
+							('actualRBW', c_double),
+							('actualVBW', c_double),
+							('actualNumIQSamples', c_double)]
 
-		# initialize variables
-		specSet = Spectrum_Settings()
-		longArray = c_long * 10
-		deviceIDs = longArray()
-		deviceSerial = c_wchar_p('')
-		numFound = c_int(0)
-		enable = c_bool(True)  # spectrum enable
-		# cf = c_double(9e8)            #center freq
-		refLevel = c_double(0)  # ref level
-		ready = c_bool(False)  # ready
-		timeoutMsec = c_int(500)  # timeout
-		trace = c_int(0)  # select Trace 1
-		detector = c_int(0)  # set detector type to max
-		# 由起始频率和终止频率直接可以得到中心频率
-		# set cf
-		cf = c_double((startFreq.value + stopFreq.value) / 2)
-		'''
-		# search the USB 3.0 bus for an RSA306
-		ret = rsa300.Search(deviceIDs, byref(deviceSerial), byref(numFound))
-		if ret != 0:
-			print('Error in Search: ' + str(ret))
-		if numFound.value < 1:
-			print('No instruments found. Exiting script.')
-			exit()
-		elif numFound.value == 1:
-			print('One device found.')
-			print('Device Serial Number: ' + deviceSerial.value)
-		else:
-			print('2 or more instruments found.')
-			# note: the API can only currently access one at a time
+			# initialize variables
+			specSet = Spectrum_Settings()
+			longArray = c_long * 10
+			deviceIDs = longArray()
+			deviceSerial = c_wchar_p('')
+			numFound = c_int(0)
+			enable = c_bool(True)  # spectrum enable
+			# cf = c_double(9e8)            #center freq
+			refLevel = c_double(0)  # ref level
+			ready = c_bool(False)  # ready
+			timeoutMsec = c_int(500)  # timeout
+			trace = c_int(0)  # select Trace 1
+			detector = c_int(0)  # set detector type to max
+			# 由起始频率和终止频率直接可以得到中心频率
+			# set cf
+			cf = c_double((startFreq.value + stopFreq.value) / 2)
+			'''
+			# search the USB 3.0 bus for an RSA306
+			ret = rsa300.Search(deviceIDs, byref(deviceSerial), byref(numFound))
+			if ret != 0:
+				print('Error in Search: ' + str(ret))
+			if numFound.value < 1:
+				print('No instruments found. Exiting script.')
+				exit()
+			elif numFound.value == 1:
+				print('One device found.')
+				print('Device Serial Number: ' + deviceSerial.value)
+			else:
+				print('2 or more instruments found.')
+				# note: the API can only currently access one at a time
 
-		# connect to the first RSA306
-		ret = rsa300.Connect(deviceIDs[0])
-		if ret != 0:
-			print('Error in Connect: ' + str(ret))
-		'''
-		# preset the RSA306 and configure spectrum settings
-		rsa300.Preset()
-		rsa300.SetCenterFreq(cf)
-		rsa300.SetReferenceLevel(refLevel)
-		rsa300.SPECTRUM_SetEnable(enable)
-		rsa300.SPECTRUM_SetDefault()
-		rsa300.SPECTRUM_GetSettings(byref(specSet))
+			# connect to the first RSA306
+			ret = rsa300.Connect(deviceIDs[0])
+			if ret != 0:
+				print('Error in Connect: ' + str(ret))
+			'''
+			# preset the RSA306 and configure spectrum settings
+			rsa300.Preset()
+			rsa300.SetCenterFreq(cf)
+			rsa300.SetReferenceLevel(refLevel)
+			rsa300.SPECTRUM_SetEnable(enable)
+			rsa300.SPECTRUM_SetDefault()
+			rsa300.SPECTRUM_GetSettings(byref(specSet))
 
-		# configure desired spectrum settings
-		# some fields are left blank because the default
-		# values set by SPECTRUM_SetDefault() are acceptable
-		specSet.span = span
-		specSet.rbw = c_double(float(rbw))
-		specSet.enableVBW = c_bool(True)
-		specSet.vbw = c_double(float(vbw))
-		specSet.traceLength = c_int(801)#c_int(int(span.value/step_size.value))#c_int(801)
-		specSet.detector = detector
-		# specSet.window =
-		specSet.verticalUnit = c_int(4)
-		specSet.actualStartFreq = startFreq
-		specSet.actualStopFreq = stopFreq
-		specSet.actualFreqStepSize = c_double(span.value/801)#step_size c_double(span.value/801)   # c_double(50000.0)
-		# specSet.actualRBW =
-		# specSet.actualVBW =
-		# specSet.actualNumIQSamples =
-		# set desired spectrum settings
-		rsa300.SPECTRUM_SetSettings(specSet)
-		rsa300.SPECTRUM_GetSettings(byref(specSet))
+			# configure desired spectrum settings
+			# some fields are left blank because the default
+			# values set by SPECTRUM_SetDefault() are acceptable
+			specSet.span = span
+			specSet.rbw = c_double(float(rbw))
+			specSet.enableVBW = c_bool(True)
+			specSet.vbw = c_double(float(vbw))
+			specSet.traceLength = c_int(801)#c_int(int(span.value/step_size.value))#c_int(801)
+			specSet.detector = detector
+			# specSet.window =
+			specSet.verticalUnit = c_int(4)
+			specSet.actualStartFreq = startFreq
+			specSet.actualStopFreq = stopFreq
+			specSet.actualFreqStepSize = c_double(span.value/801)#step_size c_double(span.value/801)   # c_double(50000.0)
+			# specSet.actualRBW =
+			# specSet.actualVBW =
+			# specSet.actualNumIQSamples =
+			# set desired spectrum settings
+			rsa300.SPECTRUM_SetSettings(specSet)
+			rsa300.SPECTRUM_GetSettings(byref(specSet))
 
-		# initialize variables for GetTrace
-		traceArray = c_float * specSet.traceLength
-		traceData = traceArray()
-		outTracePoints = c_int()
-		#print (span.value)
-		#print (specSet.actualFreqStepSize)
-		# generate frequency array for plotting the spectrum
-		freq = np.arange(specSet.actualStartFreq,
-						 specSet.actualStartFreq + specSet.actualFreqStepSize * specSet.traceLength,
-						 specSet.actualFreqStepSize)
+			# initialize variables for GetTrace
+			traceArray = c_float * specSet.traceLength
+			traceData = traceArray()
+			outTracePoints = c_int()
+			#print (span.value)
+			#print (specSet.actualFreqStepSize)
+			# generate frequency array for plotting the spectrum
+			freq = np.arange(specSet.actualStartFreq,
+							 specSet.actualStartFreq + specSet.actualFreqStepSize * specSet.traceLength,
+							 specSet.actualFreqStepSize)
 
-		# start acquisition
-		rsa300.Run()
+			# start acquisition
+			rsa300.Run()
+		except:
+			return 0
+		
+		t1 = time.time()
 		while ready.value == False:
 			rsa300.SPECTRUM_WaitForDataReady(timeoutMsec, byref(ready))
+			t2=time.time()
+			if t2-t1>3:
+				return 0
 
 		rsa300.SPECTRUM_GetTrace(c_int(0), specSet.traceLength,
 								 byref(traceData), byref(outTracePoints))
@@ -742,12 +783,11 @@ class method1:
 		return head,data1,Sub_cf_channel,Sub_span,Sub_cf,Sub_band,Sub_peak,Sub_Spectrum,Sub_Spectrum2,freq, traceData,point,point_xy,num_signal,Sub_illegal,Sub_type
 	# 返回原始的频谱数据
 
-
-	# 绘制实时的无人机频谱图，顺便计算出带宽
-	def uav0(self,rsa300,startFreq,endFreq,average,rbw,vbw):
-
-		class Spectrum_Settings(Structure):
-			_fields_ = [('span', c_double),
+	def simple_spectrum(self,rsa300,startFreq,endFreq,rbw,vbw):
+		# create Spectrum_Settings data structure
+		try:
+			class Spectrum_Settings(Structure):
+				_fields_ = [('span', c_double),
 						('rbw', c_double),
 						('enableVBW', c_bool),
 						('vbw', c_double),
@@ -761,107 +801,224 @@ class method1:
 						('actualVBW', c_double),
 						('actualNumIQSamples', c_double)]
 
-		# initialize variables
-		specSet = Spectrum_Settings()
-		longArray = c_long * 10
-		deviceIDs = longArray()
-		deviceSerial = c_wchar_p('')
-		numFound = c_int(0)
-		enable = c_bool(True)  # spectrum enable
-		# cf = c_double(9e8)            #center freq
-		refLevel = c_double(0)  # ref level
-		ready = c_bool(False)  # ready
-		timeoutMsec = c_int(500)  # timeout
-		trace = c_int(0)  # select Trace 1
-		detector = c_int(0)  # set detector type to max
-		# 由起始频率和终止频率直接可以得到中心频率
-		# set cf
-		startFreq = c_double(startFreq)
-		stopFreq = c_double(endFreq)
-		cf = c_double((startFreq.value + stopFreq.value) / 2)
-		specSet.detector = detector
-		'''
-		# search the USB 3.0 bus for an RSA306
-		ret = rsa300.Search(deviceIDs, byref(deviceSerial), byref(numFound))
-		if ret != 0:
-			print('Error in Search: ' + str(ret))
-		if numFound.value < 1:
-			print('No instruments found. Exiting script.')
-			exit()
-		elif numFound.value == 1:
-			print('One device found.')
-			print('Device Serial Number: ' + deviceSerial.value)
-		else:
-			print('2 or more instruments found.')
-			# note: the API can only currently access one at a time
+			# initialize variables
+			specSet = Spectrum_Settings()
+			longArray = c_long * 10
+			deviceIDs = longArray()
+			deviceSerial = c_wchar_p('')
+			numFound = c_int(0)
+			enable = c_bool(True)  # spectrum enable
+			cf = c_double(startFreq+(endFreq-startFreq)/2.0)  # center freq
+			refLevel = c_double(0)  # ref level
+			ready = c_bool(False)  # ready
+			timeoutMsec = c_int(500)  # timeout
+			trace = c_int(0)  # select Trace 1
+			detector = c_int(1)  # set detector type to max
 
-		# connect to the first RSA306
-		ret = rsa300.Connect(deviceIDs[0])
-		if ret != 0:
-			print('Error in Connect: ' + str(ret))
-		'''
-		# preset the RSA306 and configure spectrum settings
-		rsa300.Preset()
-		rsa300.SetCenterFreq(cf)
-		rsa300.SetReferenceLevel(refLevel)
-		rsa300.SPECTRUM_SetEnable(enable)
-		rsa300.SPECTRUM_SetDefault()
-		rsa300.SPECTRUM_GetSettings(byref(specSet))
+			# preset the RSA306 and configure spectrum settings
+			rsa300.Preset()
+			rsa300.SetCenterFreq(cf)
+			rsa300.SetReferenceLevel(refLevel)
+			rsa300.SPECTRUM_SetEnable(enable)
+			rsa300.SPECTRUM_SetDefault()
+			rsa300.SPECTRUM_GetSettings(byref(specSet))
 
-		# configure desired spectrum settings
-		# some fields are left blank because the default
-		# values set by SPECTRUM_SetDefault() are acceptable
-		span = c_double(stopFreq.value - startFreq.value)
-		specSet.span = span
-		specSet.rbw = c_double(float(rbw))
-		specSet.enableVBW = c_bool(True)
-		specSet.vbw = c_double(float(vbw))
-		specSet.traceLength = c_int(801)  # c_int(int(span.value/step_size.value))#c_int(801)
-		# specSet.window =
-		specSet.verticalUnit = c_int(4)
-		specSet.actualStartFreq = startFreq
-		specSet.actualStopFreq = stopFreq
-		specSet.actualFreqStepSize = c_double(
-			span.value / 801)  # step_size c_double(span.value/801)   # c_double(50000.0)
-		specSet.detector = detector
-		# specSet.actualRBW =
-		# specSet.actualVBW =
-		# specSet.actualNumIQSamples =
+			# configure desired spectrum settings
+			# some fields are left blank because the default
+			# values set by SPECTRUM_SetDefault() are acceptable
+			specSet.span = c_double(endFreq-startFreq)
+			specSet.rbw = c_double(rbw)
+			specSet.enableVBW = c_bool(True)
+			specSet.vbw = c_double(vbw)
+			specSet.traceLength = c_int(801)
+			#specSet.SpectrumVerticalUnits=c_int(4)
+			# specSet.window =
+			specSet.verticalUnit =c_int(4)
+			specSet.actualStartFreq = c_double(0)
+			specSet.actualStopFreq = c_double(40e6)
+			# specSet.actualFreqStepSize =c_double(50000.0)
+			# specSet.actualRBW =
+			# specSet.actualVBW =
+			# specSet.actualNumIQSamples =
 
-		# set desired spectrum settings
-		rsa300.SPECTRUM_SetSettings(specSet)
-		rsa300.SPECTRUM_GetSettings(byref(specSet))
+			# set desired spectrum settings
+			rsa300.SPECTRUM_SetSettings(specSet)
+			rsa300.SPECTRUM_GetSettings(byref(specSet))
 
-		# uncomment this if you want to print out the spectrum settings
+			# uncomment this if you want to print out the spectrum settings
 
-		# print out spectrum settings for a sanity check
-		# print('Span: ' + str(specSet.span))
-		# print('RBW: ' + str(specSet.rbw))
-		# print('VBW Enabled: ' + str(specSet.enableVBW))
-		# print('VBW: ' + str(specSet.vbw))
-		# print('Trace Length: ' + str(specSet.traceLength))
-		# print('Window: ' + str(specSet.window))
-		# print('Vertical Unit: ' + str(specSet.verticalUnit))
-		# print('Actual Start Freq: ' + str(specSet.actualStartFreq))
-		# print('Actual End Freq: ' + str(specSet.actualStopFreq))
-		# print('Actual Freq Step Size: ' + str(specSet.actualFreqStepSize))
-		# print('Actual RBW: ' + str(specSet.actualRBW))
-		# print('Actual VBW: ' + str(specSet.actualVBW))
 
-		# initialize variables for GetTrace
-		traceArray = c_float * specSet.traceLength
-		traceData = traceArray()
-		outTracePoints = c_int()
+			# print out spectrum settings for a sanity check
+			# print('Span: ' + str(specSet.span))
+			# print('RBW: ' + str(specSet.rbw))
+			# print('VBW Enabled: ' + str(specSet.enableVBW))
+			# print('VBW: ' + str(specSet.vbw))
+			# print('Trace Length: ' + str(specSet.traceLength))
+			# print('Window: ' + str(specSet.window))
+			# print('Vertical Unit: ' + str(specSet.verticalUnit))
+			# print('Actual Start Freq: ' + str(specSet.actualStartFreq))
+			# print('Actual End Freq: ' + str(specSet.actualStopFreq))
+			# print('Actual Freq Step Size: ' + str(specSet.actualFreqStepSize))
+			# print('Actual RBW: ' + str(specSet.actualRBW))
+			# print('Actual VBW: ' + str(specSet.actualVBW))
 
-		# generate frequency array for plotting the spectrum
-		freq = np.arange(specSet.actualStartFreq,
-						 specSet.actualStartFreq + specSet.actualFreqStepSize * specSet.traceLength,
-						 specSet.actualFreqStepSize)
+			# initialize variables for GetTrace
+			traceArray = c_float * specSet.traceLength
+			traceData = traceArray()
+			outTracePoints = c_int()
 
-		# start acquisition
-		rsa300.Run()
+			# generate frequency array for plotting the spectrum
+			freq = np.arange(specSet.actualStartFreq,
+							specSet.actualStartFreq + specSet.actualFreqStepSize * specSet.traceLength,
+							specSet.actualFreqStepSize)
+
+			# start acquisition
+			rsa300.Run()
+		except:
+			return 0
+		t1 = time.time()
 		while ready.value == False:
 			rsa300.SPECTRUM_WaitForDataReady(timeoutMsec, byref(ready))
+			t2=time.time()
+			if t2-t1>3:
+				return 0
+
+		rsa300.SPECTRUM_GetTrace(c_int(0), specSet.traceLength,
+								byref(traceData), byref(outTracePoints))
+		# print('Got trace data.')
+
+		# convert trace data from a ctypes array to a numpy array
+		trace = np.ctypeslib.as_array(traceData)
+
+		# Peak power and frequency calculations
+		return freq,trace
+
+	# 绘制实时的无人机频谱图，顺便计算出带宽
+	def uav0(self,rsa300,startFreq,endFreq,average,rbw,vbw):
+		try:
+			class Spectrum_Settings(Structure):
+				_fields_ = [('span', c_double),
+							('rbw', c_double),
+							('enableVBW', c_bool),
+							('vbw', c_double),
+							('traceLength', c_int),
+							('window', c_int),
+							('verticalUnit', c_int),
+							('actualStartFreq', c_double),
+							('actualStopFreq', c_double),
+							('actualFreqStepSize', c_double),
+							('actualRBW', c_double),
+							('actualVBW', c_double),
+							('actualNumIQSamples', c_double)]
+
+			# initialize variables
+			specSet = Spectrum_Settings()
+			longArray = c_long * 10
+			deviceIDs = longArray()
+			deviceSerial = c_wchar_p('')
+			numFound = c_int(0)
+			enable = c_bool(True)  # spectrum enable
+			# cf = c_double(9e8)            #center freq
+			refLevel = c_double(0)  # ref level
+			ready = c_bool(False)  # ready
+			timeoutMsec = c_int(500)  # timeout
+			trace = c_int(0)  # select Trace 1
+			detector = c_int(0)  # set detector type to max
+			# 由起始频率和终止频率直接可以得到中心频率
+			# set cf
+			startFreq = c_double(startFreq)
+			stopFreq = c_double(endFreq)
+			cf = c_double((startFreq.value + stopFreq.value) / 2)
+			specSet.detector = detector
+			'''
+			# search the USB 3.0 bus for an RSA306
+			ret = rsa300.Search(deviceIDs, byref(deviceSerial), byref(numFound))
+			if ret != 0:
+				print('Error in Search: ' + str(ret))
+			if numFound.value < 1:
+				print('No instruments found. Exiting script.')
+				exit()
+			elif numFound.value == 1:
+				print('One device found.')
+				print('Device Serial Number: ' + deviceSerial.value)
+			else:
+				print('2 or more instruments found.')
+				# note: the API can only currently access one at a time
+
+			# connect to the first RSA306
+			ret = rsa300.Connect(deviceIDs[0])
+			if ret != 0:
+				print('Error in Connect: ' + str(ret))
+			'''
+			# preset the RSA306 and configure spectrum settings
+			rsa300.Preset()
+			rsa300.SetCenterFreq(cf)
+			rsa300.SetReferenceLevel(refLevel)
+			rsa300.SPECTRUM_SetEnable(enable)
+			rsa300.SPECTRUM_SetDefault()
+			rsa300.SPECTRUM_GetSettings(byref(specSet))
+
+			# configure desired spectrum settings
+			# some fields are left blank because the default
+			# values set by SPECTRUM_SetDefault() are acceptable
+			span = c_double(stopFreq.value - startFreq.value)
+			specSet.span = span
+			specSet.rbw = c_double(float(rbw))
+			specSet.enableVBW = c_bool(True)
+			specSet.vbw = c_double(float(vbw))
+			specSet.traceLength = c_int(801)  # c_int(int(span.value/step_size.value))#c_int(801)
+			# specSet.window =
+			specSet.verticalUnit = c_int(4)
+			specSet.actualStartFreq = startFreq
+			specSet.actualStopFreq = stopFreq
+			specSet.actualFreqStepSize = c_double(
+				span.value / 801)  # step_size c_double(span.value/801)   # c_double(50000.0)
+			specSet.detector = detector
+			# specSet.actualRBW =
+			# specSet.actualVBW =
+			# specSet.actualNumIQSamples =
+
+			# set desired spectrum settings
+			rsa300.SPECTRUM_SetSettings(specSet)
+			rsa300.SPECTRUM_GetSettings(byref(specSet))
+
+			# uncomment this if you want to print out the spectrum settings
+
+			# print out spectrum settings for a sanity check
+			# print('Span: ' + str(specSet.span))
+			# print('RBW: ' + str(specSet.rbw))
+			# print('VBW Enabled: ' + str(specSet.enableVBW))
+			# print('VBW: ' + str(specSet.vbw))
+			# print('Trace Length: ' + str(specSet.traceLength))
+			# print('Window: ' + str(specSet.window))
+			# print('Vertical Unit: ' + str(specSet.verticalUnit))
+			# print('Actual Start Freq: ' + str(specSet.actualStartFreq))
+			# print('Actual End Freq: ' + str(specSet.actualStopFreq))
+			# print('Actual Freq Step Size: ' + str(specSet.actualFreqStepSize))
+			# print('Actual RBW: ' + str(specSet.actualRBW))
+			# print('Actual VBW: ' + str(specSet.actualVBW))
+
+			# initialize variables for GetTrace
+			traceArray = c_float * specSet.traceLength
+			traceData = traceArray()
+			outTracePoints = c_int()
+
+			# generate frequency array for plotting the spectrum
+			freq = np.arange(specSet.actualStartFreq,
+							 specSet.actualStartFreq + specSet.actualFreqStepSize * specSet.traceLength,
+							 specSet.actualFreqStepSize)
+
+			# start acquisition
+			rsa300.Run()
+		except:
+			return 0
+		
+		t1 = time.time()
+		while ready.value == False:
+			rsa300.SPECTRUM_WaitForDataReady(timeoutMsec, byref(ready))
+			t2=time.time()
+			if t2-t1>3:
+				return 0
 
 		rsa300.SPECTRUM_GetTrace(c_int(0), specSet.traceLength,
 								 byref(traceData), byref(outTracePoints))
@@ -1006,98 +1163,87 @@ class method1:
 	# 测向输入就是一个频率输出就是对应的强度
 	def find_direction(self,rsa300,freq,span,reflevel):
 
-		# os.chdir(os.getcwd())
-		# rsa300 = cdll.LoadLibrary("RSA_API.dll")
+		try:
+			# create Spectrum_Settings data structure
+			class Spectrum_Settings(Structure):
+				_fields_ = [('span', c_double),
+							('rbw', c_double),
+							('enableVBW', c_bool),
+							('vbw', c_double),
+							('traceLength', c_int),
+							('window', c_int),
+							('verticalUnit', c_int),
+							('actualStartFreq', c_double),
+							('actualStopFreq', c_double),
+							('actualFreqStepSize', c_double),
+							('actualRBW', c_double),
+							('actualVBW', c_double),
+							('actualNumIQSamples', c_double)]
 
-		# create Spectrum_Settings data structure
-		class Spectrum_Settings(Structure):
-			_fields_ = [('span', c_double),
-						('rbw', c_double),
-						('enableVBW', c_bool),
-						('vbw', c_double),
-						('traceLength', c_int),
-						('window', c_int),
-						('verticalUnit', c_int),
-						('actualStartFreq', c_double),
-						('actualStopFreq', c_double),
-						('actualFreqStepSize', c_double),
-						('actualRBW', c_double),
-						('actualVBW', c_double),
-						('actualNumIQSamples', c_double)]
+			# initialize variables
+			specSet = Spectrum_Settings()
+			longArray = c_long * 10
+			deviceIDs = longArray()
+			deviceSerial = c_wchar_p('')
+			numFound = c_int(0)
+			enable = c_bool(True)  # spectrum enable
+			cf = c_double(freq)  # center freq
+			refLevel = c_double(reflevel)  # ref level
+			ready = c_bool(False)  # ready
+			timeoutMsec = c_int(500)  # timeout
+			trace = c_int(0)  # select Trace 1
+			detector = c_int(1)  # set detector type to max
 
-		# initialize variables
-		specSet = Spectrum_Settings()
-		longArray = c_long * 10
-		deviceIDs = longArray()
-		deviceSerial = c_wchar_p('')
-		numFound = c_int(0)
-		enable = c_bool(True)  # spectrum enable
-		cf = c_double(freq)  # center freq
-		refLevel = c_double(reflevel)  # ref level
-		ready = c_bool(False)  # ready
-		timeoutMsec = c_int(500)  # timeout
-		trace = c_int(0)  # select Trace 1
-		detector = c_int(1)  # set detector type to max
+			# preset the RSA306 and configure spectrum settings
+			rsa300.Preset()
+			rsa300.SetCenterFreq(cf)
+			rsa300.SetReferenceLevel(refLevel)
+			rsa300.SPECTRUM_SetEnable(enable)
+			rsa300.SPECTRUM_SetDefault()
+			rsa300.SPECTRUM_GetSettings(byref(specSet))
 
-		# preset the RSA306 and configure spectrum settings
-		rsa300.Preset()
-		rsa300.SetCenterFreq(cf)
-		rsa300.SetReferenceLevel(refLevel)
-		rsa300.SPECTRUM_SetEnable(enable)
-		rsa300.SPECTRUM_SetDefault()
-		rsa300.SPECTRUM_GetSettings(byref(specSet))
+			# configure desired spectrum settings
+			# some fields are left blank because the default
+			# values set by SPECTRUM_SetDefault() are acceptable
+			specSet.span = c_double(span)
+			specSet.rbw = c_double(300e3)
+			# specSet.enableVBW =
+			# specSet.vbw =
+			specSet.traceLength = c_int(801)
+			# specSet.window =
+			specSet.verticalUnit = c_int(4)
+			specSet.actualStartFreq = c_double(freq-span/2)
+			specSet.actualStopFreq = c_double(freq+span/2)
+			# specSet.actualFreqStepSize =c_double(50000.0)
+			# specSet.actualRBW =
+			# specSet.actualVBW =
+			# specSet.actualNumIQSamples =
 
-		# configure desired spectrum settings
-		# some fields are left blank because the default
-		# values set by SPECTRUM_SetDefault() are acceptable
-		specSet.span = c_double(span)
-		specSet.rbw = c_double(300e3)
-		# specSet.enableVBW =
-		# specSet.vbw =
-		specSet.traceLength = c_int(801)
-		# specSet.window =
-		specSet.verticalUnit = c_int(4)
-		specSet.actualStartFreq = c_double(freq-span/2)
-		specSet.actualStopFreq = c_double(freq+span/2)
-		# specSet.actualFreqStepSize =c_double(50000.0)
-		# specSet.actualRBW =
-		# specSet.actualVBW =
-		# specSet.actualNumIQSamples =
+			# set desired spectrum settings
+			rsa300.SPECTRUM_SetSettings(specSet)
+			rsa300.SPECTRUM_GetSettings(byref(specSet))
 
-		# set desired spectrum settings
-		rsa300.SPECTRUM_SetSettings(specSet)
-		rsa300.SPECTRUM_GetSettings(byref(specSet))
+			# uncomment this if you want to print out the spectrum settings
 
-		# uncomment this if you want to print out the spectrum settings
+			# initialize variables for GetTrace
+			traceArray = c_float * specSet.traceLength
+			traceData = traceArray()
+			outTracePoints = c_int()
 
-		# print out spectrum settings for a sanity check
-		# print('Span: ' + str(specSet.span))
-		# print('RBW: ' + str(specSet.rbw))
-		# print('VBW Enabled: ' + str(specSet.enableVBW))
-		# print('VBW: ' + str(specSet.vbw))
-		# print('Trace Length: ' + str(specSet.traceLength))
-		# print('Window: ' + str(specSet.window))
-		# print('Vertical Unit: ' + str(specSet.verticalUnit))
-		# print('Actual Start Freq: ' + str(specSet.actualStartFreq))
-		# print('Actual End Freq: ' + str(specSet.actualStopFreq))
-		# print('Actual Freq Step Size: ' + str(specSet.actualFreqStepSize))
-		# print('Actual RBW: ' + str(specSet.actualRBW))
-		# print('Actual VBW: ' + str(specSet.actualVBW))
+			# generate frequency array for plotting the spectrum
+			freq = np.arange(specSet.actualStartFreq,
+							 specSet.actualStartFreq + specSet.actualFreqStepSize * specSet.traceLength,
+							 specSet.actualFreqStepSize)
 
-		# initialize variables for GetTrace
-		traceArray = c_float * specSet.traceLength
-		traceData = traceArray()
-		outTracePoints = c_int()
-
-		# generate frequency array for plotting the spectrum
-		freq = np.arange(specSet.actualStartFreq,
-						 specSet.actualStartFreq + specSet.actualFreqStepSize * specSet.traceLength,
-						 specSet.actualFreqStepSize)
-
-		# start acquisition
-		rsa300.Run()
-		while ready.value == False:
-			rsa300.SPECTRUM_WaitForDataReady(timeoutMsec, byref(ready))
+			# start acquisition
+			rsa300.Run()
+		except:
+			t1 = time.time()
+			while ready.value == False:
+				rsa300.SPECTRUM_WaitForDataReady(timeoutMsec, byref(ready))
+				t2=time.time()
+				if t2-t1>3:
+					return 0
 
 		rsa300.SPECTRUM_GetTrace(c_int(0), specSet.traceLength,
 								 byref(traceData), byref(outTracePoints))
@@ -1105,7 +1251,6 @@ class method1:
 
 		# convert trace data from a ctypes array to a numpy array
 		trace = np.ctypeslib.as_array(traceData)
-		print (len(trace))
 
 		# Peak power and frequency calculations
 		peakPower = np.amax(trace)
