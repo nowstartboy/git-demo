@@ -513,6 +513,8 @@ class WorkerThread2(threading.Thread):    #画无人机动态图线程
 			longitude_set= longitude
 			latitude_set= latitude
 			height_set = height_set
+		max_axis_value = -20
+		min_axis_value = -100
 		while time.time() - t_ref < self.t and self._running:
 			time1 = time1-1
 			if time1==0:
@@ -527,7 +529,12 @@ class WorkerThread2(threading.Thread):    #画无人机动态图线程
 				#self.window.canvas.restore_region(self.window.bg)
 				self.window.traceData=traceData
 				self.window.freq=freq
-				# print(self.window.traceData[0:10])
+				if max(traceData) > max_axis_value:
+					max_axis_value = max(traceData) + 5
+				min_trace = min(traceData)
+				if  min_trace > min_axis_value + 10 :
+					min_axis_value = min_trace-10
+				self.window.axes_score.set_ylim(min_axis_value,max_axis_value)
 				self.window.axes_score.set_xlim(freq[0],freq[-1])
 				self.traceData_new=self.window.traceData[0:-1]+[-10]  #要让噪声近乎无色
 				self.window.axes_score_new.scatter(self.window.freq,[time1]*len(self.window.freq),c=self.traceData_new,cmap=plt.cm.Blues,s=0.5)
@@ -809,6 +816,7 @@ class WorkerThread5(threading.Thread):     #侧向模块：自动读取信号方
 							self._running = False
 							connect_change = 1
 							wx.MessageBox("仪器连接不正常", "Message" ,wx.OK | wx.ICON_INFORMATION)
+							break
 					if direction_spectrum != 0:
 						self.traceData = max(array(self.traceAll),0).tolist()
 						peakPower = max(self.traceData)
@@ -961,7 +969,7 @@ class WorkerThread6(threading.Thread):     #画实时监测信号动态图
 				connect_change = 1
 				wx.MessageBox("仪器连接不正常", "Message" ,wx.OK | wx.ICON_INFORMATION)
 				
-		self.window.m_button11.SetLabel("开始监测")
+		self.window.m_button11.SetLabel("简单监测")
 		self.window.m_button11.SetValue(start_spectrum_state)
 		detection_state=0 #任务结束，监测状态归为0
 		print ('insert2 success')
@@ -3359,7 +3367,7 @@ class MyPanel3 ( wx.Panel ):
 		bSizer284 = wx.BoxSizer( wx.VERTICAL )
 		
 		bSizer285=wx.BoxSizer(wx.HORIZONTAL)
-		self.m_choice42Choices = list(reversed(os.listdir(method.config_data['Spec_dir'])))
+		self.m_choice42Choices = method.file_to_list(list(reversed(os.listdir(method.config_data['Spec_dir']))))
 		self.choice_Num=len(self.m_choice42Choices)
 		self.m_combo1 = wx.ComboBox( self, wx.ID_ANY, u'请选择文件...',wx.DefaultPosition, (300,20), self.m_choice42Choices, 0 )
 		self.m_combo1.Bind(wx.EVT_COMBOBOX, self.OnCombo1)
@@ -3544,7 +3552,7 @@ class MyPanel3 ( wx.Panel ):
 		self.Layout()
 		
 	def OnCombo1(self,event):
-		self.filename=self.m_combo1.GetValue()
+		self.filename=method.list_to_file(self.m_combo1.GetValue())
 		#print (self.filename)
 		self.start_time,self.end_time,self.retain_time,self.start_freq,self.end_freq,self.path=method.read_file(self.filename)
 		#print (self.start_time,self.end_time,self.retain_time)
@@ -3619,7 +3627,7 @@ class MyPanel3 ( wx.Panel ):
 		roid = l/retain_time
 		#print (roid)
 		# 绘制柱状图
-		figure_score = Figure((10,2.2),100)
+		figure_score = Figure((11.1,2.2),100)
 		axes_score = figure_score.add_subplot(111,facecolor='w')
 		axes_score.set_title("The Signal_Channel occupancy")
 		axes_score.set_xlabel("freq/MHz",fontsize=12)
@@ -3673,7 +3681,7 @@ class MyPanel3 ( wx.Panel ):
 			self.m_textCtrl38.SetValue(str((slot2))[0:8]+' 秒')
 		#print (delta)
 		occ1 = []
-		figure_score = Figure((10,2.2),100)
+		figure_score = Figure((11.1,2.2),100)
 		axes_score = figure_score.add_subplot(111,facecolor='w')
 		axes_score.set_title("The Spectrum occupancy")
 		#axes_score.set_xlabel("Time")
@@ -5480,9 +5488,11 @@ class MyFrame1 ( wx.Frame ):
 		signal_direction = free_monitor.Append(-1,"信号侧向")
 		
 		module_select.Append(wx.ID_ANY,"自由监测",free_monitor)
+		Tek_monitor = module_select.Append(-1,"信号监测")
 		self.m_menu1.Append(wx.ID_ANY,"模块选择",module_select)
 		
 		self.Bind(wx.EVT_MENU, self.switch_to_monReport, month_monitor)
+		self.Bind(wx.EVT_MENU, self.openTek, Tek_monitor)
 		self.Bind(wx.EVT_MENU, self.switch_to_spectrum, free_spectrum)
 		self.Bind(wx.EVT_MENU, self.switch_to_UAV, airplane_spectrum)
 		self.Bind(wx.EVT_MENU, self.switch_to_occupancy,spectrum_occupancy)
@@ -6253,7 +6263,7 @@ class MyFrame1 ( wx.Frame ):
 
 	def onTimer(self, evt):
 		global connect_change
-		self.panelThree.m_choice42Choices = os.listdir(method.config_data['Spec_dir'])
+		self.panelThree.m_choice42Choices = method.file_to_list(list(reversed(os.listdir(method.config_data['Spec_dir']))))
 		if self.panelThree.choice_Num!=len(self.panelThree.m_choice42Choices):
 			self.panelThree.choice_Num=len(self.panelThree.m_choice42Choices)
 			self.panelThree.m_combo1.SetItems(self.panelThree.m_choice42Choices)
@@ -6304,8 +6314,8 @@ class PaintApp(wx.App):
         win = MyFrame1(None)
         win.Show()
         self.SetTopWindow(win)
-        #if connect_state == 0:
-            #win.first_connect()
+        if connect_state == 0:
+            win.first_connect()
         return True
 
 def main():
