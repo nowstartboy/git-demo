@@ -28,6 +28,7 @@ class method1:
 		self.mysql_config=self.read_mysql_config()
 		self.conn_str1 = self.mysql_config['user1']+'/'+self.mysql_config['password1']+'@'+self.mysql_config['host']+':'+self.mysql_config['interface']+'/'+self.mysql_config['SID']
 		self.conn_str2 = self.mysql_config['user2']+'/'+self.mysql_config['password2']+'@'+self.mysql_config['host']+':'+self.mysql_config['interface']+'/'+self.mysql_config['SID']
+		self.conn_str3 = self.mysql_config['user3']+'/'+self.mysql_config['password3']+'@'+self.mysql_config['host']+':'+self.mysql_config['interface']+'/'+self.mysql_config['SID']
 		print(self.conn_str1,self.conn_str2)
 		print ('reflect_inf:',self.reflect_inf)
 		self.station_info = pandas.read_csv('taizhan.csv')
@@ -100,8 +101,7 @@ class method1:
 		return np.sqrt(dx*dx+dy*dy)
 	
 	def station_info_update(self):
-		conn_str3 = 'A1400_STATDB/cdk120803@localhost:1521/SOUJIUSUBDB'
-		connection_oracle2 = cx_Oracle.Connection(conn_str3)
+		connection_oracle2 = cx_Oracle.Connection(self.conn_str3)
 		#读取台站频率，位置信息
 		sql9 = 'select STATION_GUID, FREQ_EFB, FREQ_EFE from RSBT_FREQ'
 		sql10 = 'select GUID,STAT_LG,STAT_LA from RSBT_STATION'
@@ -1161,7 +1161,7 @@ class method1:
 
 
 	# 测向输入就是一个频率输出就是对应的强度
-	def find_direction(self,rsa300,freq,span,reflevel):
+	def find_direction(self,rsa300,freq,span,reflevel,rbw):
 
 		try:
 			# create Spectrum_Settings data structure
@@ -1206,7 +1206,7 @@ class method1:
 			# some fields are left blank because the default
 			# values set by SPECTRUM_SetDefault() are acceptable
 			specSet.span = c_double(span)
-			specSet.rbw = c_double(300e3)
+			specSet.rbw = c_double(rbw)
 			# specSet.enableVBW =
 			# specSet.vbw =
 			specSet.traceLength = c_int(801)

@@ -790,10 +790,13 @@ class WorkerThread5(threading.Thread):     #侧向模块：自动读取信号方
 		global connect_change
 		time_ref = time.time()
 		cache_num = 1
+		first_step = 0
 		self.t = 10
 		self.freq = 0
 		self.traceData = 0
-		while self._running and time.time() - time_ref < self.t:
+		self.rbw = self.input_detail[3]
+		self.vbw = self.input_detail[4]
+		while self._running :
 			angel=self.window.get_direction()
 			print (angel)
 			if angel==-2:
@@ -801,14 +804,16 @@ class WorkerThread5(threading.Thread):     #侧向模块：自动读取信号方
 			elif angel==-1:
 				wx.MessageBox('获取方向失败  .', "Error" ,wx.OK | wx.ICON_ERROR)
 			else:
+				if angel>360 or angel<0:
+					continue
 				if self.window.input_state == 1:
 					print ('get data')
-					centerFreq = (self.input_detail[0]+self.input_detail[1])/2
-					Span = self.input_detail[1]-self.input_detail[0]
+					centerFreq = self.input_detail[0]
+					Span = self.input_detail[1]
 					k = 5 #连续扫描多少帧，取最大值
 					self.traceAll = []
 					for i in range(k):
-						direction_spectrum = method.find_direction(rsa_true,centerFreq,Span,self.input_detail[2])
+						direction_spectrum = method.find_direction(rsa_true,centerFreq,Span,self.input_detail[2],self.rbw)
 						if direction_spectrum != 0:
 							peakPower,self.freq,self.traceData = direction_spectrum
 							self.traceAll.append(self.traceData)
@@ -816,9 +821,11 @@ class WorkerThread5(threading.Thread):     #侧向模块：自动读取信号方
 							self._running = False
 							connect_change = 1
 							wx.MessageBox("仪器连接不正常", "Message" ,wx.OK | wx.ICON_INFORMATION)
-							break
-					if direction_spectrum != 0:
+						time.sleep(0.05)
+					
+					if direction_spectrum != 0 and first_step != 0:
 						self.traceData = max(array(self.traceAll),0).tolist()
+						#print (self.traceData)
 						peakPower = max(self.traceData)
 						#####################将信号峰值显示到表格中
 						i=self.window.list_ctrl.GetItemCount()
@@ -835,12 +842,12 @@ class WorkerThread5(threading.Thread):     #侧向模块：自动读取信号方
 						self.window.l_userLeft.set_data(self.freq,self.traceData)
 						self.window.axesLeft.draw_artist(self.window.l_userLeft)
 						self.window.canvasLeft.draw()
+			first_step += 1
 			cache_num += 1
 			if cache_num >5:
 				self.window.draw_angel()
 				cache_num = 1
 			print (cache_num)
-			time.sleep(0.2)
 		#self.window.draw_direction()
 		#self.window.Angel()
 		#self.window.draw_angel()
@@ -4183,10 +4190,12 @@ class MyPanel4 ( wx.Panel ):
 		else:
 			print ('1111111')
 			if detection_state == 0:
-				if str(connect_machine) == 'RSA306B':
+				if connect_machine == b'RSA306B':
 					print ('22222')
 					wx.MessageBox(u'仪器为RSA306，无法获得真实GPS信息', "Message" ,wx.OK | wx.ICON_INFORMATION)
 				try:
+					self.list_ctrl.DeleteAllItems()
+					self.angel_peak = dict()
 					self.input_detail = self.getInput()
 					t = 60 #总共测试3分钟
 					detection_state = 1
@@ -4260,7 +4269,7 @@ class MyPanel4 ( wx.Panel ):
 			#画方向图
 			N=len(self.angel_peak)
 			
-			self.figure_score = Figure((2.15,2.4),100)
+			self.figure_score = Figure((3.3,2.8),100)
 			self.canvas = FigureCanvas(self.m_panel11, wx.ID_ANY, self.figure_score)
 			self.axes = self.figure_score.add_subplot(111,projection='polar',facecolor='w')
 			
@@ -4322,7 +4331,6 @@ class MyPanel4 ( wx.Panel ):
 			self.axes_score1.draw_artist(self.l_user1)
 			self.canvas1.draw()
 		else:
-			#print(self.angel_peak)
 			self.angel=sorted(self.angel_peak.keys())
 			#print (angel)
 			if len(self.angel)==36:
@@ -4337,7 +4345,7 @@ class MyPanel4 ( wx.Panel ):
 			#画方向图
 			N=len(self.angel_peak)
 			
-			self.figure_score = Figure((2.15,2.4),100)
+			self.figure_score = Figure((3.3,2.8),100)
 			self.canvas = FigureCanvas(self.m_panel11, wx.ID_ANY, self.figure_score)
 			self.axes = self.figure_score.add_subplot(111,projection='polar',facecolor='w')
 			
@@ -4419,29 +4427,36 @@ class MyPanel4 ( wx.Panel ):
 			print ('A Serial Echo Is Running...')
 			iscommon=1
 			data=[]
-
-			while iscommon: 
-				# echo 
-				s = ser.read(1)    
-				if s==b'\xa1':
+			
+			try:
+				while iscommon: 
+					# echo 
 					s = ser.read(1)
-					data.append(s)
-					s=ser.read(1)
-					data.append(s)
-					iscommon=0
-			print (data)
-			dir1=list(data[0])
-			dir2=list(data[1])
+					if s==b'\xa5':
+						s = ser.read(1)
+						s = ser.read(1)
+						s = ser.read(1)
+						if s==b'\xa1':
+							s = ser.read(1)
+							data.append(s)
+							s=ser.read(1)
+							data.append(s)
+							iscommon=0
+				print (data)
+				dir1=list(data[0])
+				dir2=list(data[1])
 
-			temp=dir1[0]
-			temp <<= 8
-			temp |= dir2[0]
-			if (temp & 32768):
-				temp=0-(temp&0x7ffff);
-			else:
-				temp =temp&0x7ffff
-			yaw=float(temp/10)
-			return yaw
+				temp=dir1[0]
+				temp <<= 8
+				temp |= dir2[0]
+				if (temp & 32768):
+					temp=0-(temp&0x7ffff);
+				else:
+					temp =temp&0x7ffff
+				yaw=float(temp/10)
+				return yaw
+			except:
+				return direction
 		else:
 			wx.MessageBox('测向模块未连接.', "Error",wx.OK | wx.ICON_ERROR)
 			return -2
@@ -4958,7 +4973,7 @@ class MyPanel6 ( wx.Panel ):
 		# font = wx.Font(20, wx.DECORATIVE,wx.NORMAL,wx.BOLD)
 		# self.m_bpButton4.SetFont(font)
 		# self.m_bpButton4.SetBackgroundColour("AQUAMARINE")
-		self.m_bpButton4 = wx.BitmapButton( self.m_panel1, wx.ID_ANY, bmp4, (580,390),wx.DefaultSize, wx.BU_AUTODRAW )
+		self.m_bpButton4 = wx.BitmapButton( self.m_panel1, wx.ID_ANY, bmp4, (620,390),wx.DefaultSize, wx.BU_AUTODRAW )
 		# bSizer6.Add( self.m_bpButton4, 0, wx.ALL, 5 )
 		
 		# self.m_bpButton5 = buttons.GenBitmapTextButton(self.m_panel1, -1, bmp, u"无人机信号 ",(640,220),wx.DefaultSize,style=wx.NO_BORDER)#位图文本按钮
@@ -4966,7 +4981,7 @@ class MyPanel6 ( wx.Panel ):
 		# font = wx.Font(20, wx.DECORATIVE,wx.NORMAL,wx.BOLD)
 		# self.m_bpButton5.SetFont(font)
 		# self.m_bpButton5.SetBackgroundColour("AQUAMARINE")
-		self.m_bpButton5 = wx.BitmapButton( self.m_panel1, wx.ID_ANY, bmp5, (580,140),wx.DefaultSize, wx.BU_AUTODRAW )
+		self.m_bpButton5 = wx.BitmapButton( self.m_panel1, wx.ID_ANY, bmp5, (620,140),wx.DefaultSize, wx.BU_AUTODRAW )
 		# bSizer4.Add( bSizer6, 1, wx.ALIGN_CENTER_HORIZONTAL|wx.ALL, 5 )
 		
 		# self.m_panel2 = wx.Panel( self.m_panel1, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
@@ -5304,12 +5319,26 @@ class MyDialog1 ( wx.Dialog ):
 		# self.m_radioBtn1 = wx.RadioButton( self, wx.ID_ANY, u"connection", wx.DefaultPosition, wx.DefaultSize, style = wx.RB_GROUP )
 		# bSizer188.Add( self.m_radioBtn1, 0, wx.ALL, 5 )
 		
-		self.m_staticText_interface = wx.StaticText( self, wx.ID_ANY, u"interface :   ", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_staticText_interface = wx.StaticText( self, wx.ID_ANY, u"接口:", wx.DefaultPosition, wx.DefaultSize, 0 )
 		self.m_staticText_interface.Wrap( -1 )
 		bSizer188.Add( self.m_staticText_interface, 0, wx.ALL, 5 )
 		
 		self.m_textCtrl_interface = wx.TextCtrl( self, wx.ID_ANY, mysql_config['interface'], wx.DefaultPosition, wx.DefaultSize, 0 )
 		bSizer188.Add( self.m_textCtrl_interface, 0, wx.ALL, 5 )
+		
+		self.m_staticText104 = wx.StaticText( self, wx.ID_ANY, u"台站 :  ", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_staticText104.Wrap( -1 )
+		bSizer188.Add( self.m_staticText104, 0, wx.ALL, 5 )
+		
+		self.m_textCtrl20 = wx.TextCtrl( self, wx.ID_ANY, mysql_config['user3'], wx.DefaultPosition, wx.DefaultSize, 0 )
+		bSizer188.Add( self.m_textCtrl20, 0, wx.ALL, 5 )
+		
+		self.m_staticText105 = wx.StaticText( self, wx.ID_ANY, u"password0: ", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_staticText105.Wrap( -1 )
+		bSizer188.Add( self.m_staticText105, 0, wx.ALL, 5 )
+		
+		self.m_textCtrl21 = wx.TextCtrl( self, wx.ID_ANY, mysql_config['password3'], wx.DefaultPosition, wx.DefaultSize, 0 )
+		bSizer188.Add( self.m_textCtrl21, 0, wx.ALL, 5 )
 		
 		# self.m_radioBtn2 = wx.RadioButton( self, wx.ID_ANY, u"no connection", wx.DefaultPosition, wx.DefaultSize, 0 )
 		# bSizer188.Add( self.m_radioBtn2, 0, wx.ALL, 5 )
@@ -5361,7 +5390,23 @@ class MyDialog1 ( wx.Dialog ):
 		self.m_textCtrl19 = wx.TextCtrl( self, wx.ID_ANY, mysql_config['password2'], wx.DefaultPosition, wx.DefaultSize, 0 )
 		bSizer190.Add( self.m_textCtrl19, 0, wx.ALL, 5 )
 		bSizer187.Add( bSizer190, 1, wx.EXPAND, 5 )
+		'''
+		bSizer191 = wx.BoxSizer( wx.HORIZONTAL )
+		self.m_staticText104 = wx.StaticText( self, wx.ID_ANY, u"station: ", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_staticText104.Wrap( -1 )
+		bSizer191.Add( self.m_staticText104, 0, wx.ALL, 5 )
 		
+		self.m_textCtrl20 = wx.TextCtrl( self, wx.ID_ANY, mysql_config['user3'], wx.DefaultPosition, wx.DefaultSize, 0 )
+		bSizer191.Add( self.m_textCtrl20, 0, wx.ALL, 5 )
+		
+		self.m_staticText105 = wx.StaticText( self, wx.ID_ANY, u"password2: ", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_staticText105.Wrap( -1 )
+		bSizer191.Add( self.m_staticText105, 00, wx.ALL, 5 )
+		
+		self.m_textCtrl21 = wx.TextCtrl( self, wx.ID_ANY, mysql_config['password3'], wx.DefaultPosition, wx.DefaultSize, 0 )
+		bSizer191.Add( self.m_textCtrl21, 0, wx.ALL, 5 )
+		bSizer187.Add( bSizer191, 1, wx.EXPAND, 5 )
+		'''
 		
 		sbSizer7.Add( bSizer187, 1, wx.EXPAND, 5 )
 		bSizer169.Add( sbSizer7, 1, wx.EXPAND, 5 )
@@ -5415,6 +5460,8 @@ class MyDialog1 ( wx.Dialog ):
 		mysql_config_data.append(self.m_textCtrl18.GetValue())  #password1
 		mysql_config_data.append(self.m_textCtrl17.GetValue())  #user2
 		mysql_config_data.append(self.m_textCtrl19.GetValue())  #password2
+		mysql_config_data.append(self.m_textCtrl20.GetValue())  #user3
+		mysql_config_data.append(self.m_textCtrl21.GetValue())  #password3
 		mysql_config_data.append(self.m_textCtrl_interface.GetValue())  #interface 1521
 		return mysql_config_data
 	
@@ -6169,7 +6216,9 @@ class MyFrame1 ( wx.Frame ):
 			mysql_config['password1']=mysql_value[3]
 			mysql_config['user2']=mysql_value[4]
 			mysql_config['password2']= mysql_value[5]
-			mysql_config['interface']= mysql_value[6]
+			mysql_config['user3']=mysql_value[6]
+			mysql_config['password3']= mysql_value[7]
+			mysql_config['interface']= mysql_value[8]
 			
 			#存储配置参数
 			jsObj = json.dumps(config_data)
