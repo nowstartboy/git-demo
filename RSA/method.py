@@ -26,13 +26,20 @@ class method1:
 		self.direction_cache=self.read_direction_cache()
 		self.reflect_inf=self.read_reflect_inf()
 		self.mysql_config=self.read_mysql_config()
+		self.uav_config=self.read_uav_config()
 		self.conn_str1 = self.mysql_config['user1']+'/'+self.mysql_config['password1']+'@'+self.mysql_config['host']+':'+self.mysql_config['interface']+'/'+self.mysql_config['SID']
 		self.conn_str2 = self.mysql_config['user2']+'/'+self.mysql_config['password2']+'@'+self.mysql_config['host']+':'+self.mysql_config['interface']+'/'+self.mysql_config['SID']
 		self.conn_str3 = self.mysql_config['user3']+'/'+self.mysql_config['password3']+'@'+self.mysql_config['host']+':'+self.mysql_config['interface']+'/'+self.mysql_config['SID']
+		# conn_str1 测试数据库
+		# conn_str2 月报数据库
+		# conn_str3 台站数据库
 		print(self.conn_str1,self.conn_str2)
 		print ('reflect_inf:',self.reflect_inf)
 		self.station_info = pandas.read_csv('taizhan.csv')
-		self.freq_info = [[940,950]]
+		# modified by vinson
+		# self.freq_info = [[940,950]]
+		self.freq_info = []
+		# modified by vinson
 		self.threshold = 200
 		self.month_freq_list = []
 		self.month_freq_str = []
@@ -84,10 +91,11 @@ class method1:
 			reflect_inf = json.load(data)
 		return reflect_inf
 
-	def get_oracle_connection(self):
-		conn_str1 = 'ceshi1/cdk120803@localhost:1521/SOUJIUSUBDB'
-		conn_str2 = 'A110000_RMDSD/cdk120803@localhost:1521/SOUJIUSUBDB'
-		return conn_str1,conn_str2
+#	commented by vinson 0831
+#	def get_oracle_connection(self):
+#		conn_str1 = 'ceshi1/cdk120803@localhost:1521/SOUJIUSUBDB'
+#		conn_str2 = 'A110000_RMDSD/cdk120803@localhost:1521/SOUJIUSUBDB'
+#		return conn_str1,conn_str2
 	
 	def test_oracle_connection(self):
 		connection_oracle = cx_Oracle.connect(self.conn_str1)
@@ -100,19 +108,19 @@ class method1:
 		dy = (gps2[1]-gps1[1])*np.pi/180*R
 		return np.sqrt(dx*dx+dy*dy)
 	
-	def station_info_update(self):
+	def station_info_update(self):   # 从RSBT_FREQ 和 RSBT_STATION中读出数据，去除空项和重复项，根据GUID一致的提出来合并
 		connection_oracle2 = cx_Oracle.Connection(self.conn_str3)
 		#读取台站频率，位置信息
 		sql9 = 'select STATION_GUID, FREQ_EFB, FREQ_EFE from RSBT_FREQ'
 		sql10 = 'select GUID,STAT_LG,STAT_LA from RSBT_STATION'
 		#读取台站表数据，台站id,经纬度，然后去除空值
 		station_guid_key = pandas.read_sql(sql10,connection_oracle2)
-		station_guid_key_new = station_guid_key.dropna(axis=0,how='any')
+		station_guid_key_new = station_guid_key.dropna(axis=0,how='any')  #去除空值？
 		print (station_guid_key_new.shape)
 		station_guid_key_new = station_guid_key_new.rename(columns={'GUID':'STATION_GUID'}) 
 		#读取频率表数据，体站id,其实频率，终止频率
 		station_guid = pandas.read_sql(sql9,connection_oracle2)
-		station_guid_one = station_guid.drop_duplicates()
+		station_guid_one = station_guid.drop_duplicates()     #去除重复的
 		station_guid_new=station_guid_one.dropna(axis=0,how='any')
 		print (station_guid_new.shape)
 		#将两张表进行链接
@@ -122,6 +130,7 @@ class method1:
 		return 
 	
 	def get_freq_range(self,gps,threshold):
+		print ("start get_freq_range in method1")
 		[m,n]=self.station_info.shape
 		freq_info = []
 		for i in range(m):
@@ -132,6 +141,7 @@ class method1:
 				start_freq = self.station_info.loc[i,'FREQ_EFB']
 				end_freq = self.station_info.loc[i,'FREQ_EFE']
 				freq_info.append([start_freq,end_freq])
+		print ("finish get frequency in database /get_freq_range")
 		return freq_info
 
 	def read_service(self,conn_str2):
@@ -153,6 +163,32 @@ class method1:
 		with open(os.getcwd()+'\\mysql.json','r') as data:
 			mysql_config=json.load(data)
 		return mysql_config
+		
+	def read_uav_config(self):
+		with open(os.getcwd()+'\\uav.json','r') as data:
+			uav_config=json.load(data)
+		return uav_config
+
+	def test_textCtrl_input(self, input_value, input_unit):
+		'''
+		   This method is set to get the input_freq_value and the unit is MHz
+		   input: input_string, input_unit
+		   output: {-1:invalid input, others:output_freq}
+		'''
+		if input_value.strip()=='':
+			return -1
+		else:
+			try:
+				input_freq=float(input_value)
+				if input_freq < 0:
+					return -1
+				if input_unit=='GHz':
+					input_freq=input_freq*(10**3)
+				elif input_unit=='KHz':
+					input_freq=input_freq/(10**3)
+				return input_freq
+			except (ValueError,TypeError) as e:
+				return -1
 
 	def file_to_list(self, file_name):
 		new_l = []
@@ -237,7 +273,8 @@ class method1:
 
 
 	def detectNoise(self,rsa300,startFreq,endFreq,rbw,vbw):
-
+		# 实现方法为：取频谱迹线后，取迹线上的最小值，
+		# 然后取15dB以内的所有点取平均值，得到平均噪声电平
 		# create Spectrum_Settings data structure
 		try:
 			class Spectrum_Settings(Structure):
@@ -346,7 +383,7 @@ class method1:
 
 		# Peak power and frequency calculations
 		min_peak = min(trace)
-		threshold = min_peak + 5
+		threshold = min_peak + 15
 		# Peak power and frequency calculations
 		trace1 = [data for data in trace if data < threshold]
 		ave = np.mean(trace1)
@@ -437,6 +474,8 @@ class method1:
 
 	#预测带宽3
 	def bandwidth3(self,peakPower,peakFreq,trace,freq):
+		#方法：从低频方向和高频方向分别向中心频率处搜索，找到两边比最大电平小6dB和10dB的点，如果两个带宽差1M以上，则选用-10dB的带宽
+		# 否则，选用-6dB的带宽    经常碰到波形畸变严重的情况，-3dB没法正确测得带宽
 		trace_max=max(trace)
 		a1 = 0
 		a2 = len(trace) - 1
@@ -483,8 +522,10 @@ class method1:
 
 
 
-	# 一次扫频参数：噪声均值、起始频率、终止频率、频率跨度、rbw、任务名、计数、某一次扫频的具体时间
-	def spectrum1(self,rsa300,average, startFreq, stopFreq, span, rbw,vbw, str_time, count, str_tt1, str_tt2,longitude,latitude,num_signal,Sub_cf_all):
+	# 一次扫频参数：噪声均值、起始频率、终止频率、频率跨度、rbw、vbw,任务名,扫频计数,当前迹线对应时间，\
+	# 当前迹线时间，精度，维度, 信号数，子信道数
+	def spectrum1(self,rsa300,average, startFreq, stopFreq, span, rbw,vbw, str_time, count, str_tt1, 
+				str_tt2,longitude,latitude,num_signal,Sub_cf_all, threshold):
 		# create Spectrum_Settings data structure
 		try:
 			class Spectrum_Settings(Structure):
@@ -592,8 +633,6 @@ class method1:
 
 		rsa300.SPECTRUM_GetTrace(c_int(0), specSet.traceLength,
 								 byref(traceData), byref(outTracePoints))
-		#print('Got trace data.')
-
 		# convert trace data from a ctypes array to a numpy array
 		trace = np.ctypeslib.as_array(traceData)
 
@@ -608,33 +647,31 @@ class method1:
 		#draw_Spectrum_total,axes_score,l_user1=draw_picture(freq,traceData,'Spectrum',"Frequency/MHz","Amplitude/dBmV")
 		#axes_score.set_ylim(-100,-60)
 		
-		
-
 		# 绘制方框
-		a = []
-		b = []  # 存储频率
-		c = []
-		d = []  # 存储电平
-		freq_list=[]
+		a = []  # 临时存储功率超过平均值8dB的频率点序列号
+		b = []  # 存储信号段的位置，
+		c = []  # 临时存储功率超过平均值8dB的频率点的功率值
+		d = []  # 存储电平超过阈值的所有信号段的功率值
+		freq_list=[] #记录功率超过阈值的数据点对应的频率值
 		freq_all=[]
 		peakPower=[] #记录峰值
-		peakNum=[]  #记录峰值对应的横坐标
+		peakNum=[]  #记录峰值对应的横坐标位置
 		# 得到局部数据
 		for i in range(801):
-			if traceData[i] > average + 8:
+			if traceData[i] > average + threshold:
 				a.append(i)
 				c.append(trace[i])
 				freq_list.append(freq[i])
 				#print (a)
-			elif traceData[i]<average + 6:
+			elif traceData[i]<average + threshold:   #信号幅度降低到阈值以下时
 				if a:
 					#print (a)
-					b.append(a)
+					b.append(a)    #把信号段放到b和d
 					d.append(c)
-					peakNum.append(a[np.argmax(c)])
-					peakPower.append(np.max(c))
-					freq_all.append(freq_list)
-					a = []
+					peakNum.append(a[np.argmax(c)])    # 添加本段信号峰值位置
+					peakPower.append(np.max(c))     # 记录本段信号峰值功率
+					freq_all.append(freq_list)     # 添加这一段信号带宽的所有频率点
+					a = []		#清空a,c,freq_list准备记录下一段信号
 					c = []
 					freq_list=[]
 		#print (b)
@@ -652,34 +689,36 @@ class method1:
 				# rest_power.append(d[i])
 
 		j1 = 0
-		point=[] #画框在整个界面的坐标信息，用于鼠标坐标相应
-		point_xy=[]  #画框的坐标信息 ，用于画框
-		#print('average:',average)
-		for i in range(len(b)):
+		point=[] #画框在整个界面的坐标信息，用于鼠标坐标响应
+		point_xy=[]  #画框的坐标信息，用于画框
+		for i in range(len(b)):    # 信号序号点
 			# 跳过空数据
 			if len(b[i]) > 1:
 				j1 += 1
-				s1_x = freq[b[i][0]]
+				s1_x = freq[b[i][0]]   # 子频率段起始频率
 				s1_y = average
-				s2_x = freq[b[i][-1]]
+				s2_x = freq[b[i][-1]]	# 子频率段终止频率
 				s2_y = average + 6
 				# s3_x = b[i][0]
 				s3_y = np.amax(d[i])
 				
+				# ？？？ 为什么在这里加span是否大于30M的判断？
 				freq_len=freq[-1]-freq[0]
-				if freq_len>20e6:
+				if freq_len>30e6:
 					#print (average,d[i])
 					break;
-				#print ('changdu:',freq_len)
+					
 				u_x=200000
-				u_y=20   #画图与实际的偏置
-				point_x1=540*(s1_x-u_x-freq[0])/freq_len+88
-				point_x2=540*(s2_x+u_x-freq[0])/freq_len+88
-				point_y1=308*(-s1_y+20)/70+48
-				point_y2=308*(-s3_y+20)/70+48
+				#u_x=20000
+				u_y=0   #画图与实际的偏置
+				# point_x1=540*(s1_x-u_x-freq[0])/freq_len+88
+				# point_x2=540*(s2_x+u_x-freq[0])/freq_len+88
+				point_x1=570*(s1_x-u_x-freq[0])/freq_len+90
+				point_x2=570*(s2_x+u_x-freq[0])/freq_len+90
+				point_y1=360*(-s1_y+20)/70+56
+				point_y2=360*(-s3_y+20)/70+56
 				point.append([point_x1,point_x2,point_y2,point_y1])
 				point_xy.append([s1_x-u_x,s2_x+u_x,s1_y,s3_y])
-
 
 		# 分别绘制局部的子图
 		j = 0
@@ -692,6 +731,7 @@ class method1:
 		Sub_peak=[]         #存峰值
 		Sub_illegal=[]      #存当前信号段合法与否
 		Sub_type=[]         #信号业务类型
+		service_name = -1
 		#print (len(b))
 		for i in range(len(b)):
 			if len(b[i]) > 1:
@@ -702,50 +742,54 @@ class method1:
 				e_f = float(freq[b[i][-1]])
 				
 				#print ((float(b_f), float(e_f)))
-				sql1 = "select SERVICEDID from  RMBT_SERVICE_FREQDETAIL where STARTFREQ <= %s and ENDFREQ >= %s" % (float(b_f/1e6), float(e_f/1e6))
+				sql1 = "select SERVICEDID from RMBT_SERVICE_FREQDETAIL where STARTFREQ <= %s and ENDFREQ >= %s" % (float(b_f/1e6), float(e_f/1e6))
 				#con1 = mdb.connect(mysql_config['host'], mysql_config['user'], mysql_config['password'],'110000_rmdsd')
 				con1 = cx_Oracle.Connection(self.conn_str2)
 				c = pandas.read_sql(sql1, con1)
 				#print (c)
+				# modified by vinson，获取业务名给Freq_Name显示
 				if len(c) > 0: 
-					sevice_name = c['SERVICEDID'][0]
+					service_name = c['SERVICEDID'][0]
+					sql_FreqName = "select FREQNAME from RMBT_SERVICE_FREQDETAIL where STARTFREQ <= %s and ENDFREQ >= %s" % (float(b_f/1e6), float(e_f/1e6))
+					data_sql_FreqName = pandas.read_sql(sql_FreqName, con1)
+					#print (c)
+					Freq_Name = data_sql_FreqName['FREQNAME'][0]
 				else:
-					sevice_name = -1
-				#print ('sevice_name:',sevice_name)
-				
-
+					service_name = -1
+					Freq_Name = '  '
 				#print ('have signals:',i+1)
 				#band_t, peak_t, peak_tf ,draw_Sub_Spectrum,draw_Sub_Spectrum2= spectrum0(rsa300,b_f, e_f, str_time, j, count, str_tt1, str_tt2,longitude,latitude,rbw,vbw)
 
-				band_t=e_f-b_f
-				peak_t=np.amax(d[i])
-				peak_tf=freq[b[i][np.argmax(d[i])]]
-				
+				band_t=e_f-b_f    # 带宽
+				peak_t=np.amax(d[i])  # 峰值电平
+				peak_tf=freq[b[i][np.argmax(d[i])]]		#峰值频率
 				
 				#Sub_Spectrum.append(draw_Sub_Spectrum)
 				#Sub_Spectrum2.append(draw_Sub_Spectrum2)
-				Sub_cf_channel.append((freq[-1]+freq[0])/2)
+				Sub_cf_channel.append((freq[-1]+freq[0])/2)   # 当前扫描帧中心频率
 				#Sub_span.append(e_f-b_f)
-				Sub_span.append(freq[-1]-freq[0])
+				Sub_span.append(freq[-1]-freq[0])    # 当前扫描帧span
 				Sub_peak.append(peak_t)
 				# 输出监测到的信号的真实信号带宽，峰值信息，中心频率
 				#print(band_t, peak_t, peak_tf)
 				#freq_cf, band = bandwidth2(peakPower[i], peakNum[i], trace, freq)  # 求带宽
 				#print (peakPower[i], freq[peakNum[i]], d[i], freq_all[i])
-				freq_cf, band = self.bandwidth3(peakPower[i], freq[peakNum[i]], d[i], freq_all[i])  # 求带宽
-				Sub_band.append(band)
-				Sub_cf.append(freq_cf)
+				freq_cf, band = self.bandwidth3(peakPower[i], freq[peakNum[i]], d[i], freq_all[i])  
+				# 求带宽 参数：峰值功率，峰值频率，改频段所有功率值，该频段所有频率值
+				Sub_band.append(band)    # 检测到信号段的带宽
+				Sub_cf.append(freq_cf)   # 检测到信号段的中心频率
 				
 				#判断信号是否合法
 				illegal=0  #0表示非法
-				business_type =0 #表示未知
+				# business_type =0 #表示未知
 				for station_freq in self.freq_info:
 					if freq_cf>=station_freq[0]*1e6 and freq_cf<=station_freq[1]*1e6:
 						illegal=1
-						business_type = '移动'
+						# business_type = '移动'
 						break
 				Sub_illegal.append(illegal)
-				Sub_type.append(business_type)
+				# Sub_type.append(business_type)
+				Sub_type.append(Freq_Name)   # add by vinson, 把业务名称添加进sub_type
 
 				#判断是否有重复频段,有则序号加1
 				if not Sub_cf_all:
@@ -759,16 +803,20 @@ class method1:
 				con = cx_Oracle.Connection(self.conn_str1)
 				with con:
 					# 获取连接的cursor，只有获取了cursor，我们才能进行各种操作
-					#print ('#'*30)
 					#print ('ceshi1')
 					cur = con.cursor()
-					cur.execute("INSERT INTO SPECTRUM_IDENTIFIED VALUES('%s', %s, to_date('%s','yyyy-MM-dd hh24:mi:ss'), %s, %s, %s, %s, %s, %s, %s, %s,%s,%s)"%(str_time, sevice_name, str_tt1, float(b_f), float(e_f),float(freq_cf),float(band), int(count),float(longitude),float(latitude),num_signal,illegal,float(peak_t)))
+					# 向本地测试数据库写入数据：测试任务名，serviceID，迹线时间，开始频率，结束频率，中心频率，带宽，第几条迹线，
+					# 精度，维度，第几个信号，是否合法，峰值电平
+					cur.execute("INSERT INTO SPECTRUM_IDENTIFIED VALUES('%s', %s, \
+						to_date('%s','yyyy-MM-dd hh24:mi:ss'), %s, %s, %s, %s, %s, %s, %s, %s,%s,%s)"%(str_time, 
+						service_name, str_tt1, float(b_f), float(e_f),float(freq_cf),float(band), int(count),
+						float(longitude),float(latitude),num_signal,illegal,float(peak_t)))
 					cur.close()
 				con.commit()
 				con.close()
 				
-		Sub_Spectrum=freq  #频率
-		Sub_Spectrum2=trace  #信号
+		Sub_Spectrum=freq  # 完整扫频频率
+		Sub_Spectrum2=trace  # 完整扫频信号
 		# 后台自动保存这一次扫频频谱数据
 		# df1 = DataFrame({
 			# 'datetime':str_tt1,
@@ -780,7 +828,9 @@ class method1:
 		#print (Sub_band,Sub_cf_channel)
 
 		#draw_Spectrum_total=1
-		return head,data1,Sub_cf_channel,Sub_span,Sub_cf,Sub_band,Sub_peak,Sub_Spectrum,Sub_Spectrum2,freq, traceData,point,point_xy,num_signal,Sub_illegal,Sub_type
+		# 返回信息：频率列表，电平列表，信号段中心频率数组，信号段span数组，信号段检测带宽数组，信号段峰值数组，完整扫频频率数据，
+		# 完整扫频电平数据，完整迹线频率，完整迹线电平，红框四角，比红框宽一些的范围，检测到信号数量，信号段是否合法标识数组，业务名数组
+		return head,data1,Sub_cf_channel,Sub_span,Sub_cf,Sub_band,Sub_peak,Sub_Spectrum,Sub_Spectrum2,freq,traceData,point,point_xy,num_signal,Sub_illegal,Sub_type, service_name
 	# 返回原始的频谱数据
 
 	def simple_spectrum(self,rsa300,startFreq,endFreq,rbw,vbw):
@@ -1103,22 +1153,23 @@ class method1:
 		con = cx_Oracle.Connection(self.conn_str1) 
 		#con = mdb.connect('localhost', 'root', 'cdk120803', 'ceshi1')
 		c = pandas.read_sql(sql3, con)
-		print ('spectrum success')
+		#print ('spectrum success')
 		con.commit()
 		con.close()
 		spectrum_occ1 = sum(c['FREQ_BW'])
 		if len(c['COUNT1'])>0:
 			c1 = np.array(c['COUNT1'])
 			num = max(c['COUNT1']) - min(c['COUNT1'])+1
-			spectrum_occ = spectrum_occ1 / float(spectrum_span)
+			spectrum_occ = spectrum_occ1 / (float(spectrum_span)*num)*100
 		else:
-			print ('count:',len(c['COUNT1']))
+			#print ('count:',len(c['COUNT1']))
 			spectrum_occ = 0
 		return spectrum_occ  # 返回频谱占用度
 
 	# 导入导出数据
 	# 粗扫描，返回某一次任务的初试频率和终止频率以及频率和功率矩阵,起始时间和终止时间
-	def importData_cu(self,task_name,file_name,raw_path):#task_name就是文件夹的名字，filename就是粗扫的csv文件名字，raw_path就是文件存储的路径
+	def importData_cu(self,task_name,file_name,raw_path):
+		#task_name就是文件夹的名字，filename就是粗扫的csv文件名字，raw_path就是文件存储的路径
 		sql = "select startFreq,endFreq,Task_B,Task_E from minitor_task where Task_Name='%s'"%(task_name[0:19])
 		#con=mdb.connect(mysql_config['host'],mysql_config['user'],mysql_config['password'],mysql_config['database'])
 		con = cx_Oracle.Connection(self.conn_str1)
@@ -1143,19 +1194,21 @@ class method1:
 		point_xy = []
 		left_freq = x_mat[0]
 		freq_len = x_mat[-1] - x_mat[0]
-		u_x = 200000
-		u_y = 20
+		# u_x = 20000
+		u_x = 0    # 鼠标触发区域的频率轴范围扩展
+		u_y = 10   # 鼠标触发提示的幅度轴扩展
 		[m,n]=y_mat.shape
 		for i in range(m-1):
-			s1_x = detail_information[i][1]-detail_information[i][3]
-			s2_x = detail_information[i][1]+detail_information[i][3]
-			s1_y = detail_information[i][2]
-			point_x1=540*(s1_x-u_x-left_freq)/freq_len+88
-			point_x2=540*(s2_x+u_x-left_freq)/freq_len+88
-			point_y1=308*(-s1_y+10)/80+48
-			point_y2=308*(-s1_y)/80+48
+			s1_x = detail_information[i][1]-detail_information[i][3]   # cf-band
+			s2_x = detail_information[i][1]+detail_information[i][3]	# cf + band
+			s1_y = detail_information[i][2]  	# band
+			point_x1=570*(s1_x-u_x-left_freq)/freq_len+90
+			point_x2=570*(s2_x+u_x-left_freq)/freq_len+90
+			point_y1=360*(-s1_y+u_y)/80+56
+			point_y2=360*(-s1_y-u_y)/80+56
 			point_xy.append([point_x1,point_x2,point_y2,point_y1])
 		print (point_xy)
+		# 生成频谱图上的峰值提示信息
 		label_information=[str(detail_information[u][0])+'\n'+'cf:'+'%.2f'%(detail_information[u][1]/1e6)+'MHz\n'+'peak:'+'%.2f'%(detail_information[u][2])+'dBmV\n'+'band:'+'%.3f'%(detail_information[u][3]/1e6)+'MHz' for u in range(m-1)]
 		return start_freq_cu,end_freq_cu,x_mat,y_mat,start_time_cu,end_time_cu,detail_information,point_xy,label_information
 
@@ -1286,13 +1339,15 @@ class method1:
 
 
 
-	#数据库存储
-	def rmbt_facility_freqband_emenv(self,task_name,span,start_time,end_time,longitude,latitude,mfid='11000001400001', statismode='04',serviceid='1',address='aasfasdfasfasdf',threshold=2.3,occ2=0,height=0):
+	# 取测试数据库数据统计写入月报数据库 RMBT_FACILITY_FREQBAND_EMENV数据表
+	def rmbt_facility_freqband_emenv(self,task_name,span,start_time,end_time,longitude,latitude, serviceid, threshold,
+									mfid='11000001400001', statismode='04',
+									address='aasfasdfasfasdf',occ2=0,height=1):
 		sql2 = "select FreQ_BW,COUNT1,legal from SPECTRUM_IDENTIFIED where Task_Name='%s'" % (
 			task_name) + "and Start_time between to_date('%s'," % (
 			start_time) +"'yyyy-MM-dd hh24:mi:ss')" + "and to_date('%s'," % (end_time) +"'yyyy-MM-dd hh24:mi:ss')"
 		#con = mdb.connect(mysql_config['host'], mysql_config['user'], mysql_config['password'],mysql_config['database'])
-		con = cx_Oracle.Connection(self.conn_str1)
+		con = cx_Oracle.Connection(self.conn_str1)    # 取ceshi数据库中spectrum_identified数据进行统计写入月报数据库
 		inf = pandas.read_sql(sql2, con)
 		statisstartday = str(start_time)
 		statisendday = str(end_time)
@@ -1300,62 +1355,82 @@ class method1:
 		longitude = Decimal(longitude).quantize(Decimal('0.000000000'))
 		frame_num = len(inf['COUNT1'].drop_duplicates())
 		sig = np.sum(inf['FREQ_BW'].values)
-		occ = (float(sig)*100) / (span*frame_num)
+		if frame_num != 0:
+			occ = (float(sig)*100) / (span*frame_num)   #出现信号的总带宽占总监测span的比例
+		else:
+			occ = 0
 		bandoccupancy = Decimal(occ).quantize(Decimal('0.00'))
 		threshold = Decimal(threshold).quantize(Decimal('0.00'))
 		height = Decimal(height).quantize(Decimal('0.00'))
 		######legal=1是合法0是非法
-		legal_sig = inf[inf['LEGAL']==0]
-		legal_frame_num = len(legal_sig['COUNT1'])
-		legal_sig1 = inf[inf['LEGAL']==1]
-		legal_frame_num1 = len(legal_sig1['COUNT1'])
-		print (legal_frame_num,legal_frame_num1)
+		legal_sig = inf[inf['LEGAL']==0]   #合法台站数据集
+		legal_frame_num = len(legal_sig['COUNT1'])   # 发现合法台站信号的帧数
+		illegal_sig = inf[inf['LEGAL']==1]  #非法台站数据集
+		illegal_frame_num = len(illegal_sig['COUNT1'])  # 非法台站帧数
+		# print (legal_frame_num,legal_frame_num1)
 		legal_band = np.sum(legal_sig['FREQ_BW'].values)
-		if legal_frame_num == 0:
-			occ1 = 0.01
+		illegal_band = np.sum(illegal_sig['FREQ_BW'].values)
+		if legal_frame_num == 0:   
+			# occ1 = 0.01    #为什么不是0？    合法台站频谱占用度
+			occ1 = 0
 		else:
 			occ1 = float(legal_band*100)/(span*legal_frame_num)
+		if illegal_frame_num == 0:
+			occ2 = 0
+		else:
+			occ2 = float(illegal_band*100)/(span*illegal_frame_num)
 		occ1 = Decimal(occ1).quantize(Decimal('0.00'))
 		occ2 = Decimal(occ2).quantize(Decimal('0.00'))
-		occ3  =100 - occ1
+		occ3  =100 - occ1-occ2
 		occ3 = Decimal(occ3).quantize(Decimal('0.00'))
-		print (occ1,occ2,occ3)
+		# print (occ1,occ2,occ3)
 		con.close()
 		#con = mdb.connect(mysql_config['host'], mysql_config['user'], mysql_config['password'],'110000_rmdsd')
 		con = cx_Oracle.Connection(self.conn_str2)
 		with con:
 			# 获取连接的cursor，只有获取了cursor，我们才能进行各种操作
 			cur = con.cursor()  # 一条游标操作就是一条数据插入，第二条游标操作就是第二条记录，所以最好一次性插入或者日后更新也行
-			cur.execute("INSERT INTO rmbt_facility_freqband_emenv VALUES('%s',to_date('%s','yyyy-MM-dd hh24:mi:ss'),to_date('%s','yyyy-MM-dd hh24:mi:ss'),'%s','%s',%s,%s,%s,%s,%s,%s,%s,%s,'%s')"
-						%(mfid, statisstartday, statisendday, statismode, serviceid, bandoccupancy, threshold, occ1, occ2, occ3,latitude, longitude, height, address))
+			cur.execute("INSERT INTO rmbt_facility_freqband_emenv VALUES('%s',to_date('%s',\
+						'yyyy-MM-dd hh24:mi:ss'),to_date('%s','yyyy-MM-dd hh24:mi:ss'),'%s','%s',\
+						%s,%s,%s,%s,%s,%s,%s,%s,'%s')"
+						%(mfid, statisstartday, statisendday, statismode, serviceid, bandoccupancy, 
+						threshold, occ1, occ2, occ3,latitude, longitude, height, address))
 			cur.close()
 		con.commit()
 		con.close()
 
-
-	def rmbt_facility_freq_emenv3(self,task_name,start_time,end_time,ssid,mfid='11000001400001',servicedid='1',statismode='04',amplitudeunit='01',threshold=6):
+	# 统计测试信号数据写入月报数据库 RMBT_FACILITY_FREQ_EMENV数据表
+	def rmbt_facility_freq_emenv3(self,task_name,start_time,end_time,ssid,servicedid,threshold,mfid='11000001400001',
+								statismode='04',amplitudeunit='01'):
 		#sql2 = "select Signal_No, Start_time, FREQ_CF, FreQ_BW, COUNT1, peakpower, channel_no from spectrum_identified where Task_Name='%s'" % (task_name)
 		sql2 = "select COUNT1,Signal_No,FREQ_CF,FreQ_BW,peakpower from SPECTRUM_IDENTIFIED where Task_Name='%s'" % (
 			task_name) + "and Start_time between to_date('%s'," % (
 			start_time) +"'yyyy-MM-dd hh24:mi:ss')" + "and to_date('%s'," % (end_time) +"'yyyy-MM-dd hh24:mi:ss')"
 		#con = mdb.connect(mysql_config['host'], mysql_config['user'], mysql_config['password'],mysql_config['database'])
-		con = cx_Oracle.Connection(self.conn_str1)
+		con = cx_Oracle.Connection(self.conn_str1)    # ceshi库
 		inf = pandas.read_sql(sql2, con)
 		df = inf
 		con.close()
 		list1 = df['SIGNAL_NO'].drop_duplicates().values
 		df_r = []
+		frame_num = len(df['COUNT1'].drop_duplicates())
 		for i in range(len(list1)):
 			df1 = df[df['SIGNAL_NO'] == list1[i]]
 			df1["index"] = range(len(df1))
 			df1 = df1.set_index(["index"])
 			df_r.append(df1)
 		for sig in range(len(df_r)):
-			occ = len(df_r[sig]['COUNT1'].drop_duplicates()) / float(len(df['COUNT1'].drop_duplicates()))
+			if frame_num != 0:
+				occ = len(df_r[sig]['COUNT1'].drop_duplicates()) / float(frame_num)
+			else:
+				occ = 0
+			occ = Decimal(occ * 100).quantize(Decimal('0.00'))
+			'''
 			if occ == 1:
 				occ = Decimal(occ).quantize(Decimal('0.00'))
 			else:
 				occ = Decimal(occ * 100).quantize(Decimal('0.00'))
+			'''
 			statisstartday = str(start_time)
 			statisendday = str(end_time)
 			#servicedid = df_r[sig]['SIGNAL_NO'][0]
@@ -1377,14 +1452,14 @@ class method1:
 			with con:
 				# 获取连接的cursor，只有获取了cursor，我们才能进行各种操作
 				cur = con.cursor()  # 一条游标操作就是一条数据插入，第二条游标操作就是第二条记录，所以最好一次性插入或者日后更新也行
-				cur.execute("INSERT INTO rmbt_facility_freq_emenv VALUES('%s',to_date('%s','yyyy-MM-dd hh24:mi:ss'),to_date('%s','yyyy-MM-dd hh24:mi:ss'),'%s','%s',%s,%s,'%s','%s',%s,%s,%s,%s)"
-							%(str(mfid), statisstartday, statisendday, str(statismode), str(servicedid), cf_avg, band_avg,str(ssid), str(amplitudeunit), maxamplitude, midamplitude, occ, threshold))
+				cur.execute("INSERT INTO rmbt_facility_freq_emenv VALUES('%s',to_date('%s','yyyy-MM-dd hh24:mi:ss'),\
+							to_date('%s','yyyy-MM-dd hh24:mi:ss'),'%s','%s',%s,%s,'%s','%s',%s,%s,%s,%s)" %(str(mfid), statisstartday, statisendday, str(statismode), str(servicedid), cf_avg, band_avg,str(ssid),str(amplitudeunit), maxamplitude, midamplitude, occ, threshold))
 				cur.close()
 			con.commit()
 
 
-
-	def rmbt_freq_occupancy(self,span,start_time,end_time,startFreq,stopFreq,longitude,latitude,height,trace1,head,average,mfid='11000001400001',addr='aasfasdfasfasdf',amplitudeunit='01'):
+	# 生成整个监测过程中的最大合成帧，并统计该帧的频谱占用度
+	def rmbt_freq_occupancy(self,span,start_time,end_time,startFreq,stopFreq,longitude,latitude,height,trace1,head,average,threshold,mfid='11000001400001',addr='aasfasdfasfasdf',amplitudeunit='01'):
 		step = span / float(801)
 		startFreq1 = Decimal(startFreq/1e6).quantize(Decimal('0.0000000'))
 		stopFreq1 = Decimal(stopFreq/1e6).quantize(Decimal('0.0000000'))
@@ -1410,15 +1485,15 @@ class method1:
 			#peak = np.max(temp)
 			peak = temp1[-1]
 			mid = temp1[int(len(temp)/2)]
-			occ = len(temp[temp>average+6])/float(len(temp))
+			occ = len(temp[temp>average+threshold])/float(len(temp))
 			occ = round(occ,2)
-			occ1.append(occ*100)
+			occ1.append(occ*100)   #与数据库存储格式不符，应乘以10000
 			mid_list.append(mid)
 			peak_list.append(peak)
 		z['Max_peak'] = peak_list
 		z['mid'] = mid_list
 		z['occ'] = occ1
-		z['threshold'] = 6
+		z['threshold'] = threshold
 		#存入BLOB文件需要中间缓存文件
 		file_path=os.getcwd()+"\\cache\\"
 		#print (file_path)
@@ -1434,7 +1509,9 @@ class method1:
 			cur = con.cursor()  # 一条游标操作就是一条数据插入，第二条游标操作就是第二条记录，所以最好一次性插入或者日后更新也行
 			# print([str_time, start_time, str_time1, float(t), float(s_c), path, deviceSerial, anteid, count])
 			cur.setinputsizes(blobData=cx_Oracle.BLOB)
-			sql = "INSERT INTO RMBT_FREQ_OCCUPANCY VALUES('%s',to_date('%s','yyyy-MM-dd hh24:mi:ss'),to_date('%s','yyyy-MM-dd hh24:mi:ss'),%s,%s,%s,%s,%s,%s,'%s','%s',:blobData)"%(mfid,start_time, end_time, startFreq1, stopFreq1, step1, longitude1, latitude1, height1, addr, amplitudeunit)
+			sql = "INSERT INTO RMBT_FREQ_OCCUPANCY VALUES('%s',to_date('%s','yyyy-MM-dd hh24:mi:ss'),to_date('%s','yyyy-MM-dd hh24:mi:ss'),\
+														%s,%s,%s,%s,%s,%s,'%s','%s',:blobData)"%(mfid,start_time, end_time, 
+														startFreq1, stopFreq1, step1, longitude1, latitude1, height1, addr, amplitudeunit)
 			cur.execute(sql,{'blobData':load_file})
 			cur.close()
 		con.commit()
@@ -1695,3 +1772,5 @@ class method1:
 
 if __name__=='__main__':
 	method = method1()
+	input_value = method.test_textCtrl_input('23.0','KHz')
+	print (input_value)
